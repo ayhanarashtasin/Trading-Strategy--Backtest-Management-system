@@ -26,9 +26,11 @@ export const ALL_COLUMN_METADATA = [
   { id: "test_type", label: "Test Type", defaultVisible: true, category: "General" },
   { id: "start_date", label: "Start Date", defaultVisible: true, category: "Market" },
   { id: "end_date", label: "End Date", defaultVisible: true, category: "Market" },
+  { id: "duration_days", label: "Days", defaultVisible: true, category: "Market" },
   { id: "total_trades", label: "Trades", defaultVisible: true, category: "Performance" },
   { id: "profit_factor", label: "Profit Factor", defaultVisible: true, category: "Performance" },
   { id: "average_trade_percent", label: "Avg Trade %", defaultVisible: true, category: "Performance" },
+  { id: "median_trade_percent", label: "Median Trade %", defaultVisible: true, category: "Performance" },
   { id: "win_rate_percent", label: "Win Rate %", defaultVisible: true, category: "Performance" },
   { id: "payoff_ratio", label: "Payoff Ratio", defaultVisible: true, category: "Performance" },
   { id: "max_drawdown_percent", label: "Max Drawdown %", defaultVisible: true, category: "Performance" },
@@ -227,6 +229,34 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 95,
     },
 
+    // 11b. Duration Days (Numeric sorting)
+    {
+      id: "duration_days",
+      accessorFn: (row) => {
+        if (row.duration_days != null) return row.duration_days;
+        if (row.start_date && row.end_date) {
+          const diff = Math.round(
+            (new Date(row.end_date).getTime() - new Date(row.start_date).getTime()) /
+              (1000 * 60 * 60 * 24)
+          );
+          return isNaN(diff) ? null : Math.max(0, diff);
+        }
+        return null;
+      },
+      header: "Days",
+      sortingFn: "basic",
+      cell: ({ getValue }) => {
+        const days = getValue<number | null>();
+        if (days == null) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
+        return (
+          <div className="text-right font-mono text-muted-foreground text-[11px]">
+            {formatNumber(days, 0)} d
+          </div>
+        );
+      },
+      size: 75,
+    },
+
     // 12. Trades (Numeric sorting)
     {
       id: "total_trades",
@@ -271,12 +301,31 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
         if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(val);
         return (
-          <div className={`text-right font-mono ${num > 0 ? "text-profit" : "text-loss"}`}>
+          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"}`}>
             {formatPercent(num, 3)}
           </div>
         );
       },
       size: 90,
+    },
+
+    // 14b. Median Trade % (Numeric sorting)
+    {
+      id: "median_trade_percent",
+      accessorKey: "median_trade_percent",
+      header: "Median Trade",
+      sortingFn: "basic",
+      cell: ({ row }) => {
+        const val = row.original.median_trade_percent;
+        if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
+        const num = Number(val);
+        return (
+          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"}`}>
+            {formatPercent(num, 3)}
+          </div>
+        );
+      },
+      size: 95,
     },
 
     // 15. Win Rate % (Numeric sorting)

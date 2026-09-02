@@ -118,6 +118,7 @@ export function BacktestForm({
   const [maxDrawdownPercent, setMaxDrawdownPercent] = useState<string>(initialBacktest?.max_drawdown_percent?.toString() || "");
   const [winRatePercent, setWinRatePercent] = useState<string>(initialBacktest?.win_rate_percent?.toString() || "");
   const [averageTradePercent, setAverageTradePercent] = useState<string>(initialBacktest?.average_trade_percent?.toString() || "");
+  const [medianTradePercent, setMedianTradePercent] = useState<string>(initialBacktest?.median_trade_percent?.toString() || "");
   const [cagrPercent, setCagrPercent] = useState<string>(initialBacktest?.cagr_percent?.toString() || "");
   const [payoffRatio, setPayoffRatio] = useState<string>(initialBacktest?.payoff_ratio?.toString() || "");
   const [expectancyPercent, setExpectancyPercent] = useState<string>(initialBacktest?.expectancy_percent?.toString() || "");
@@ -388,6 +389,7 @@ export function BacktestForm({
         max_drawdown_percent: parseNullableNumber(maxDrawdownPercent),
         win_rate_percent: parseNullableNumber(winRatePercent),
         average_trade_percent: parseNullableNumber(averageTradePercent),
+        median_trade_percent: parseNullableNumber(medianTradePercent),
         cagr_percent: parseNullableNumber(cagrPercent),
         payoff_ratio: parseNullableNumber(payoffRatio),
         expectancy_percent: parseNullableNumber(expectancyPercent),
@@ -802,6 +804,27 @@ export function BacktestForm({
                   required
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="eyebrow block">
+                  Duration (Days)
+                </label>
+                <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 font-mono text-xs text-muted-foreground">
+                  {startDate && endDate ? (
+                    (() => {
+                      const days = Math.round(
+                        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      );
+                      if (isNaN(days) || days < 0) return "Invalid range";
+                      const years = (days / 365.25).toFixed(1);
+                      return `${days} d (~${years}y)`;
+                    })()
+                  ) : (
+                    "Auto-calculated"
+                  )}
+                </div>
+              </div>
             </div>
           </Card>
 
@@ -933,7 +956,7 @@ export function BacktestForm({
             </div>
 
             {/* Core Required Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 font-mono">
               <div className="space-y-1.5">
                 <label className="eyebrow block">
                   Total Trades
@@ -1026,6 +1049,22 @@ export function BacktestForm({
                     handleInputChange();
                   }}
                   placeholder="0.082"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="eyebrow block">
+                  Median Trade %
+                </label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={medianTradePercent}
+                  onChange={(e) => {
+                    setMedianTradePercent(e.target.value);
+                    handleInputChange();
+                  }}
+                  placeholder="0.065"
                 />
               </div>
             </div>

@@ -514,6 +514,16 @@ export default function BacktestDetailPage({
                     <span className="eyebrow block">Data Source</span>
                     <Value>{backtest.data_source || "API"}</Value>
                   </div>
+                  <div>
+                    <span className="eyebrow block">Duration</span>
+                    <Value>
+                      {backtest.duration_days != null
+                        ? `${formatNumber(backtest.duration_days, 0)} days`
+                        : backtest.start_date && backtest.end_date
+                          ? `${formatNumber(Math.max(0, Math.round((new Date(backtest.end_date).getTime() - new Date(backtest.start_date).getTime()) / (1000 * 60 * 60 * 24))), 0)} days`
+                          : "N/A"}
+                    </Value>
+                  </div>
                 </div>
               </Card>
 
@@ -569,6 +579,12 @@ export default function BacktestDetailPage({
                 <div className="rounded-md border border-border bg-muted/50 p-3">
                   <span className="eyebrow block">CAGR %</span>
                   <Value className="mt-1.5 text-sm font-semibold">{formatPercent(backtest.cagr_percent)}</Value>
+                </div>
+                <div className="rounded-md border border-border bg-muted/50 p-3">
+                  <span className="eyebrow block">Median Trade %</span>
+                  <Value className="mt-1.5 text-sm font-semibold">
+                    {backtest.median_trade_percent != null ? formatPercent(backtest.median_trade_percent, 3) : "N/A"}
+                  </Value>
                 </div>
                 <div className="rounded-md border border-border bg-muted/50 p-3">
                   <span className="eyebrow block">Payoff Ratio</span>

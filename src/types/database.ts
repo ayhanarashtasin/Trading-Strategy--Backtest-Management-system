@@ -140,6 +140,7 @@ export interface Backtest {
   data_source: string | null;
   start_date: string;
   end_date: string;
+  duration_days?: number | null;
 
   // Execution Assumptions
   fee_per_side_percent: number | null;
@@ -161,6 +162,7 @@ export interface Backtest {
   max_drawdown_percent: number | null;
   win_rate_percent: number | null;
   average_trade_percent: number | null;
+  median_trade_percent: number | null;
   cagr_percent: number | null;
   payoff_ratio: number | null;
   expectancy_percent: number | null;

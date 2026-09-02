@@ -278,6 +278,16 @@ export function BacktestDrawer({
                   className="col-span-2"
                 />
                 <Reading
+                  label="Duration (Days)"
+                  value={
+                    backtest.duration_days != null
+                      ? `${formatNumber(backtest.duration_days, 0)} days`
+                      : backtest.start_date && backtest.end_date
+                        ? `${formatNumber(Math.max(0, Math.round((new Date(backtest.end_date).getTime() - new Date(backtest.start_date).getTime()) / (1000 * 60 * 60 * 24))), 0)} days`
+                        : "N/A"
+                  }
+                />
+                <Reading
                   label="Data source"
                   value={backtest.data_source}
                   mono={false}
@@ -340,6 +350,7 @@ export function BacktestDrawer({
               {[
                 ["Win rate", formatPercent(backtest.win_rate_percent)],
                 ["Average trade", formatPercent(backtest.average_trade_percent, 3)],
+                ["Median trade", formatPercent(backtest.median_trade_percent, 3)],
                 [
                   "Payoff ratio",
                   backtest.payoff_ratio != null

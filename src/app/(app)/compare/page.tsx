@@ -110,6 +110,7 @@ function CompareContent() {
     const ddValues = selectedBacktests.map((b) => b.max_drawdown_percent).filter((v) => v !== null).map(Number);
     const wrValues = selectedBacktests.map((b) => b.win_rate_percent).filter((v) => v !== null).map(Number);
     const avgTradeValues = selectedBacktests.map((b) => b.average_trade_percent).filter((v) => v !== null).map(Number);
+    const medianTradeValues = selectedBacktests.map((b) => b.median_trade_percent).filter((v) => v !== null).map(Number);
     const sharpeValues = selectedBacktests.map((b) => b.sharpe_ratio).filter((v) => v !== null).map(Number);
     const sortinoValues = selectedBacktests.map((b) => b.sortino_ratio).filter((v) => v !== null).map(Number);
 
@@ -119,6 +120,7 @@ function CompareContent() {
       bestDD: ddValues.length > 0 ? Math.min(...ddValues) : null, // Lower DD is best
       bestWR: wrValues.length > 0 ? Math.max(...wrValues) : null,
       bestAvgTrade: avgTradeValues.length > 0 ? Math.max(...avgTradeValues) : null,
+      bestMedianTrade: medianTradeValues.length > 0 ? Math.max(...medianTradeValues) : null,
       bestSharpe: sharpeValues.length > 0 ? Math.max(...sharpeValues) : null,
       bestSortino: sortinoValues.length > 0 ? Math.max(...sortinoValues) : null,
     };
@@ -298,6 +300,30 @@ function CompareContent() {
                 )}
               />
 
+              <MetricRow
+                label="Duration (Days)"
+                render={(b) => {
+                  const days =
+                    b.duration_days != null
+                      ? b.duration_days
+                      : b.start_date && b.end_date
+                        ? Math.max(
+                            0,
+                            Math.round(
+                              (new Date(b.end_date).getTime() -
+                                new Date(b.start_date).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            )
+                          )
+                        : null;
+                  return (
+                    <span className="font-mono text-muted-foreground">
+                      {days != null ? `${formatNumber(days, 0)} days` : "N/A"}
+                    </span>
+                  );
+                }}
+              />
+
               <SectionRow>Performance</SectionRow>
 
               <MetricRow
@@ -391,6 +417,31 @@ function CompareContent() {
                         }`}
                       >
                         {formatPercent(b.average_trade_percent, 3)}
+                      </span>
+                      {isBest && <Badge variant="success">Best</Badge>}
+                    </span>
+                  );
+                }}
+              />
+
+              <MetricRow
+                label="Median trade"
+                render={(b) => {
+                  const isBest =
+                    b.median_trade_percent != null &&
+                    Number(b.median_trade_percent) === bestValues.bestMedianTrade;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className={`font-mono font-semibold ${
+                          b.median_trade_percent == null
+                            ? "text-muted-foreground/60"
+                            : Number(b.median_trade_percent) >= 0
+                              ? "text-profit"
+                              : "text-loss"
+                        }`}
+                      >
+                        {formatPercent(b.median_trade_percent, 3)}
                       </span>
                       {isBest && <Badge variant="success">Best</Badge>}
                     </span>
