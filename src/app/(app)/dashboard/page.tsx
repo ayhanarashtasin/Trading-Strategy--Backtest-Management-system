@@ -26,8 +26,9 @@ import {
   ArrowRight,
   GitBranch,
   Clock,
+  Calendar,
 } from "lucide-react";
-import { formatPercent, formatNumber, formatDateTime } from "@/lib/utils";
+import { formatPercent, formatNumber, formatDate, formatDateTime } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { profile, canEdit } = useAuth();
@@ -120,6 +121,7 @@ export default function DashboardPage() {
                       <tr>
                         <th className="pl-5">Backtest</th>
                         <th>Market</th>
+                        <th>Date Added</th>
                         <th className="text-right">Trades</th>
                         <th className="text-right">PF</th>
                         <th className="text-right">Return</th>
@@ -141,6 +143,15 @@ export default function DashboardPage() {
                             {bt.symbol}{" "}
                             <span className="text-foreground">
                               {bt.timeframe}
+                            </span>
+                          </td>
+                          <td
+                            className="whitespace-nowrap font-mono text-xs text-muted-foreground"
+                            title={`Inserted into website on ${formatDateTime(bt.created_at)}`}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                              {formatDate(bt.created_at)}
                             </span>
                           </td>
                           <td className="text-right font-mono text-muted-foreground">
@@ -254,7 +265,7 @@ export default function DashboardPage() {
                             {s.name}
                           </p>
                           <p className="truncate font-mono text-[11px] text-muted-foreground">
-                            {s.strategy_family} · {s.default_direction}
+                            {s.strategy_family} · {s.default_direction} · Added {formatDate(s.created_at)}
                           </p>
                         </div>
                         <Badge variant="outline" className="shrink-0">

@@ -252,8 +252,12 @@ export default function BacktestDetailPage({
                   {formatDate(backtest.end_date)}
                 </span>
                 <span aria-hidden>&middot;</span>
-                <span>
-                  Entered by {backtest.creator?.display_name || "a team member"}
+                <span
+                  className="inline-flex items-center gap-1.5 font-mono"
+                  title={`Inserted into website on ${formatDateTime(backtest.created_at)}`}
+                >
+                  <Calendar className="h-3 w-3 text-primary/70" />
+                  Inserted on {formatDate(backtest.created_at)} by {backtest.creator?.display_name || "a team member"}
                 </span>
               </div>
             </div>
@@ -523,6 +527,10 @@ export default function BacktestDetailPage({
                           ? `${formatNumber(Math.max(0, Math.round((new Date(backtest.end_date).getTime() - new Date(backtest.start_date).getTime()) / (1000 * 60 * 60 * 24))), 0)} days`
                           : "N/A"}
                     </Value>
+                  </div>
+                  <div>
+                    <span className="eyebrow block">Inserted into Website</span>
+                    <Value>{formatDateTime(backtest.created_at)}</Value>
                   </div>
                 </div>
               </Card>

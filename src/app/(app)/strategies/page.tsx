@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/components/providers/auth-provider";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -25,8 +26,9 @@ import {
   RotateCcw,
   LayoutGrid,
   List,
+  Calendar,
 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { useCachedState, readQueryCache } from "@/lib/query-cache";
 import { CardGridSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 
@@ -52,10 +54,14 @@ export default function StrategiesPage() {
   const { canEdit, user } = useAuth();
   const router = useRouter();
 
-  // Filters
+  // Filters & Sorting
   const [searchQuery, setSearchQuery] = useState("");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateAddedRange, setDateAddedRange] = useState<"all" | "today" | "7d" | "30d" | "90d" | "custom">("all");
+  const [dateAddedFrom, setDateAddedFrom] = useState("");
+  const [dateAddedTo, setDateAddedTo] = useState("");
+  const [sortBy, setSortBy] = useState<"created_desc" | "created_asc" | "updated_desc" | "name_asc" | "name_desc">("created_desc");
   const [showArchived, setShowArchived] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
@@ -156,7 +162,7 @@ export default function StrategiesPage() {
 
   const filteredStrategies = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
-    return strategies.filter((s) => {
+    const result = strategies.filter((s) => {
       const matchesSearch =
         !q ||
         s.name.toLowerCase().includes(q) ||
@@ -167,9 +173,59 @@ export default function StrategiesPage() {
         familyFilter === "all" || s.strategy_family === familyFilter;
       const matchesStatus = statusFilter === "all" || s.status === statusFilter;
 
+      // Date Added (Inserted into website) Filter
+      if (dateAddedRange !== "all" && s.created_at) {
+        const itemDate = new Date(s.created_at);
+        const now = new Date();
+        if (dateAddedRange === "today") {
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (itemDate < startOfToday) return false;
+        } else if (dateAddedRange === "7d") {
+          const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (dateAddedRange === "30d") {
+          const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (dateAddedRange === "90d") {
+          const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (dateAddedRange === "custom") {
+          if (dateAddedFrom) {
+            const from = new Date(dateAddedFrom + "T00:00:00");
+            if (itemDate < from) return false;
+          }
+          if (dateAddedTo) {
+            const to = new Date(dateAddedTo + "T23:59:59.999");
+            if (itemDate > to) return false;
+          }
+        }
+      }
+
       return matchesSearch && matchesFamily && matchesStatus;
     });
-  }, [strategies, deferredQuery, familyFilter, statusFilter]);
+
+    // Date-wise and alphabetical sorting
+    result.sort((a, b) => {
+      if (sortBy === "created_desc") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortBy === "created_asc") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (sortBy === "updated_desc") {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+      if (sortBy === "name_asc") {
+        return a.name.localeCompare(b.name);
+      }
+      if (sortBy === "name_desc") {
+        return b.name.localeCompare(a.name);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [strategies, deferredQuery, familyFilter, statusFilter, dateAddedRange, dateAddedFrom, dateAddedTo, sortBy]);
 
   const allFamilies = useMemo(
     () =>
@@ -230,7 +286,7 @@ export default function StrategiesPage() {
         <Select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-8 w-40 text-xs"
+          className="h-8 w-36 text-xs"
           aria-label="Filter by status"
         >
           <option value="all">All statuses</option>
@@ -244,6 +300,57 @@ export default function StrategiesPage() {
           <option value="Production Candidate">Production Candidate</option>
           <option value="Live">Live</option>
           <option value="Rejected">Rejected</option>
+        </Select>
+
+        {/* Date Added (Inserted) Filter */}
+        <Select
+          value={dateAddedRange}
+          onChange={(e) => setDateAddedRange(e.target.value as any)}
+          className="h-8 w-36 text-xs"
+          aria-label="Filter by date added"
+        >
+          <option value="all">Any date added</option>
+          <option value="today">Added today</option>
+          <option value="7d">Added past 7 days</option>
+          <option value="30d">Added past 30 days</option>
+          <option value="90d">Added past 90 days</option>
+          <option value="custom">Custom date…</option>
+        </Select>
+
+        {dateAddedRange === "custom" && (
+          <div className="flex items-center gap-1">
+            <Input
+              type="date"
+              value={dateAddedFrom}
+              onChange={(e) => setDateAddedFrom(e.target.value)}
+              aria-label="Date added from"
+              className="h-8 w-32 font-mono text-xs px-2"
+              title="Date added from"
+            />
+            <span className="text-muted-foreground text-xs">to</span>
+            <Input
+              type="date"
+              value={dateAddedTo}
+              onChange={(e) => setDateAddedTo(e.target.value)}
+              aria-label="Date added to"
+              className="h-8 w-32 font-mono text-xs px-2"
+              title="Date added to"
+            />
+          </div>
+        )}
+
+        {/* Sort Order */}
+        <Select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          className="h-8 w-36 text-xs"
+          aria-label="Sort strategies"
+        >
+          <option value="created_desc">Newest inserted</option>
+          <option value="created_asc">Oldest inserted</option>
+          <option value="updated_desc">Recently updated</option>
+          <option value="name_asc">Name (A–Z)</option>
+          <option value="name_desc">Name (Z–A)</option>
         </Select>
 
         <ToolbarCheckbox checked={showArchived} onChange={setShowArchived}>
@@ -353,9 +460,21 @@ export default function StrategiesPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
-                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-                  {formatDate(strategy.created_at)}
-                </span>
+                <div
+                  className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
+                  title={`Inserted into website on ${formatDateTime(strategy.created_at)}`}
+                >
+                  <Calendar className="h-3 w-3 text-primary/70" />
+                  <span>Added {formatDate(strategy.created_at)}</span>
+                  {strategy.creator?.display_name && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span className="max-w-[100px] truncate">
+                        {strategy.creator.display_name}
+                      </span>
+                    </>
+                  )}
+                </div>
 
                 {strategy.archived_at ? (
                   <Button
@@ -396,7 +515,7 @@ export default function StrategiesPage() {
                   <th>Status</th>
                   <th className="text-right">Versions</th>
                   <th>Tags</th>
-                  <th>Created</th>
+                  <th>Date Added</th>
                   <th className="pr-5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -437,8 +556,14 @@ export default function StrategiesPage() {
                         ))}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap font-mono text-muted-foreground">
-                      {formatDate(s.created_at)}
+                    <td
+                      className="whitespace-nowrap font-mono text-xs text-muted-foreground"
+                      title={`Inserted into website on ${formatDateTime(s.created_at)}`}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                        {formatDate(s.created_at)}
+                      </span>
                     </td>
                     <td className="pr-5 text-right">
                       {s.archived_at ? (

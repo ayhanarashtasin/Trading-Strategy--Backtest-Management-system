@@ -209,6 +209,34 @@ function BacktestsPageContent() {
       if (filters.feesIncludedOnly && !b.fees_included) return false;
       if (filters.oosTestedOnly && !b.oos_tested) return false;
 
+      // 14. Date Added (Inserted into website) Filter
+      if (filters.dateAddedRange !== "all" && b.created_at) {
+        const itemDate = new Date(b.created_at);
+        const now = new Date();
+        if (filters.dateAddedRange === "today") {
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (itemDate < startOfToday) return false;
+        } else if (filters.dateAddedRange === "7d") {
+          const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (filters.dateAddedRange === "30d") {
+          const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (filters.dateAddedRange === "90d") {
+          const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          if (itemDate < cutoff) return false;
+        } else if (filters.dateAddedRange === "custom") {
+          if (filters.dateAddedFrom) {
+            const from = new Date(filters.dateAddedFrom + "T00:00:00");
+            if (itemDate < from) return false;
+          }
+          if (filters.dateAddedTo) {
+            const to = new Date(filters.dateAddedTo + "T23:59:59.999");
+            if (itemDate > to) return false;
+          }
+        }
+      }
+
       return true;
     });
   }, [backtests, deferredFilters]);

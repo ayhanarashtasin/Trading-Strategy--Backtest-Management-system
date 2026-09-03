@@ -18,12 +18,14 @@ import {
   Edit,
   Check,
   Minus,
+  Calendar,
 } from "lucide-react";
 import {
   formatPercent,
   formatNumber,
   formatCurrency,
   formatDate,
+  formatDateTime,
 } from "@/lib/utils";
 
 import { BacktestRow } from "../table/column-definitions";
@@ -155,18 +157,29 @@ export function BacktestDrawer({
 
         {/* Provenance and actions */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-2.5">
-          <p className="text-xs text-muted-foreground">
-            <span className="eyebrow mr-2">Strategy</span>
-            <Link
-              href={`/strategies/${backtest.strategy_version?.strategy?.id || ""}`}
-              className="font-medium text-primary hover:underline"
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
+              <span className="eyebrow mr-2">Strategy</span>
+              <Link
+                href={`/strategies/${backtest.strategy_version?.strategy?.id || ""}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {backtest.strategy_version?.strategy?.name || "Strategy"}
+              </Link>
+              <span className="ml-1.5 font-mono">
+                {backtest.strategy_version?.version_name || ""}
+              </span>
+            </p>
+            <span aria-hidden>·</span>
+            <span
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
+              title={`Inserted into website on ${formatDateTime(backtest.created_at)}`}
             >
-              {backtest.strategy_version?.strategy?.name || "Strategy"}
-            </Link>
-            <span className="ml-1.5 font-mono">
-              {backtest.strategy_version?.version_name || ""}
+              <Calendar className="h-3 w-3 text-primary/70" />
+              Added {formatDate(backtest.created_at)}
+              {backtest.creator_name && ` by ${backtest.creator_name}`}
             </span>
-          </p>
+          </div>
 
           <div className="flex items-center gap-2">
             <Link href={`/backtests/${backtest.id}`}>
@@ -291,6 +304,11 @@ export function BacktestDrawer({
                   label="Data source"
                   value={backtest.data_source}
                   mono={false}
+                />
+                <Reading
+                  label="Inserted into website"
+                  value={formatDateTime(backtest.created_at)}
+                  className="col-span-2 sm:col-span-1"
                 />
               </div>
             </Panel>

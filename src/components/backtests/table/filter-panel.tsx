@@ -17,6 +17,11 @@ export interface FilterState {
   direction: string;
   status: string;
 
+  // Date Added (Inserted into website) for date-wise tracking
+  dateAddedRange: "all" | "today" | "7d" | "30d" | "90d" | "custom";
+  dateAddedFrom: string;
+  dateAddedTo: string;
+
   // Numeric filters with operators
   tradesOp: ">=" | "<=" | "=" | ">" | "<";
   tradesVal: string;
@@ -48,6 +53,9 @@ export const INITIAL_FILTER_STATE: FilterState = {
   timeframe: "all",
   direction: "all",
   status: "all",
+  dateAddedRange: "all",
+  dateAddedFrom: "",
+  dateAddedTo: "",
   tradesOp: ">=",
   tradesVal: "",
   pfOp: ">=",
@@ -101,6 +109,7 @@ export function FilterPanel({
     filters.timeframe !== "all",
     filters.direction !== "all",
     filters.status !== "all",
+    filters.dateAddedRange !== "all",
     filters.tradesVal !== "",
     filters.pfVal !== "",
     filters.profitVal !== "",
@@ -139,6 +148,43 @@ export function FilterPanel({
             ))}
           </Select>
 
+          {/* Date Added (Inserted) Filter */}
+          <Select
+            value={filters.dateAddedRange}
+            onChange={(e) => updateField("dateAddedRange", e.target.value)}
+            className="h-8 w-36 text-xs"
+            aria-label="Filter by date added"
+          >
+            <option value="all">Any date added</option>
+            <option value="today">Added today</option>
+            <option value="7d">Added past 7 days</option>
+            <option value="30d">Added past 30 days</option>
+            <option value="90d">Added past 90 days</option>
+            <option value="custom">Custom date range…</option>
+          </Select>
+
+          {filters.dateAddedRange === "custom" && (
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                value={filters.dateAddedFrom}
+                onChange={(e) => updateField("dateAddedFrom", e.target.value)}
+                aria-label="Date added from"
+                className="h-8 w-32 font-mono text-xs px-2"
+                title="Added from"
+              />
+              <span className="text-muted-foreground text-xs">to</span>
+              <Input
+                type="date"
+                value={filters.dateAddedTo}
+                onChange={(e) => updateField("dateAddedTo", e.target.value)}
+                aria-label="Date added to"
+                className="h-8 w-32 font-mono text-xs px-2"
+                title="Added to"
+              />
+            </div>
+          )}
+
           {/* Source Select */}
           <Select
             value={filters.source}
@@ -147,6 +193,7 @@ export function FilterPanel({
             aria-label="Filter by source"
           >
             <option value="all">All sources</option>
+            <option value="AggTrades">AggTrades</option>
             <option value="TradingView">TradingView</option>
             <option value="Freqtrade">Freqtrade</option>
             <option value="Python">Python</option>

@@ -10,10 +10,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { Strategy, Backtest } from "@/types/database";
+import { formatDate } from "@/lib/utils";
 
 interface SearchResultsState {
-  strategies: Array<Pick<Strategy, "id" | "name" | "strategy_family" | "status" | "default_direction">>;
-  backtests: Array<Pick<Backtest, "id" | "backtest_name" | "symbol" | "timeframe" | "source" | "profit_factor" | "net_profit_percent">>;
+  strategies: Array<Pick<Strategy, "id" | "name" | "strategy_family" | "status" | "default_direction" | "created_at">>;
+  backtests: Array<Pick<Backtest, "id" | "backtest_name" | "symbol" | "timeframe" | "source" | "profit_factor" | "net_profit_percent" | "created_at">>;
 }
 
 interface HeaderProps {
@@ -89,7 +90,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
         const [{ data: stratData }, { data: btData }] = await Promise.all([
           supabase
             .from("strategies")
-            .select("id, name, strategy_family, status, default_direction")
+            .select("id, name, strategy_family, status, default_direction, created_at")
             .or(
               `name.ilike.%${safe}%,description.ilike.%${safe}%,strategy_family.ilike.%${safe}%`
             )
@@ -97,7 +98,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
           supabase
             .from("backtests")
             .select(
-              "id, backtest_name, symbol, timeframe, source, profit_factor, net_profit_percent"
+              "id, backtest_name, symbol, timeframe, source, profit_factor, net_profit_percent, created_at"
             )
             .or(
               `backtest_name.ilike.%${safe}%,symbol.ilike.%${safe}%,details.ilike.%${safe}%`
@@ -237,8 +238,13 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
                           </span>
                         </span>
                       </span>
-                      <span className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        {s.status}
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          Added {formatDate(s.created_at)}
+                        </span>
+                        <span className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          {s.status}
+                        </span>
                       </span>
                     </button>
                   ))}
@@ -268,6 +274,9 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2.5 font-mono text-[11px]">
+                        <span className="text-[10px] text-muted-foreground">
+                          Added {formatDate(bt.created_at)}
+                        </span>
                         {bt.profit_factor != null && (
                           <span className="text-foreground">
                             PF {Number(bt.profit_factor).toFixed(2)}

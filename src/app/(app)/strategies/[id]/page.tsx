@@ -35,8 +35,9 @@ import {
   Activity,
   FileCode,
   ShieldAlert,
+  Calendar,
 } from "lucide-react";
-import { formatPercent, formatNumber, formatDateTime } from "@/lib/utils";
+import { formatPercent, formatNumber, formatDate, formatDateTime } from "@/lib/utils";
 
 export default function StrategyDetailPage({
   params,
@@ -185,12 +186,16 @@ export default function StrategyDetailPage({
                   {strategy.default_direction}
                 </span>
                 <span aria-hidden>&middot;</span>
-                <span>
-                  Created by {strategy.creator?.display_name || "a team member"}
+                <span
+                  className="inline-flex items-center gap-1 font-mono"
+                  title={`Inserted into website on ${formatDateTime(strategy.created_at)}`}
+                >
+                  <Calendar className="h-3 w-3 text-primary/70" />
+                  Inserted on {formatDate(strategy.created_at)}
                 </span>
                 <span aria-hidden>&middot;</span>
-                <span className="font-mono">
-                  {formatDateTime(strategy.created_at)}
+                <span>
+                  Created by {strategy.creator?.display_name || "a team member"}
                 </span>
               </div>
 
@@ -355,6 +360,13 @@ export default function StrategyDetailPage({
                         <span className="eyebrow">
                           Revision {ver.version_number}
                         </span>
+                        <span
+                          className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground"
+                          title={`Version added on ${formatDateTime(ver.created_at)}`}
+                        >
+                          <Calendar className="h-2.5 w-2.5 text-muted-foreground/70" />
+                          Added {formatDate(ver.created_at)}
+                        </span>
                       </div>
 
                       <div className="flex items-center space-x-2">
@@ -465,6 +477,7 @@ export default function StrategyDetailPage({
                         <th>Version</th>
                         <th>Market</th>
                         <th>Source</th>
+                        <th>Date Added</th>
                         <th className="text-right">Trades</th>
                         <th className="text-right">PF</th>
                         <th className="text-right">Return</th>
@@ -497,6 +510,15 @@ export default function StrategyDetailPage({
                             <Badge variant="outline" className="font-mono">
                               {bt.source}
                             </Badge>
+                          </td>
+                          <td
+                            className="whitespace-nowrap font-mono text-xs text-muted-foreground"
+                            title={`Inserted into website on ${formatDateTime(bt.created_at)}`}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                              {formatDate(bt.created_at)}
+                            </span>
                           </td>
                           <td className="text-right font-mono text-muted-foreground">
                             {formatNumber(bt.total_trades, 0)}

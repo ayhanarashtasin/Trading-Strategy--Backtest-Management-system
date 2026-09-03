@@ -14,6 +14,7 @@ import {
   formatPercent,
   formatNumber,
   formatDate,
+  formatDateTime,
 } from "@/lib/utils";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import CompareLoading from "./loading";
@@ -322,6 +323,18 @@ function CompareContent() {
                     </span>
                   );
                 }}
+              />
+
+              <MetricRow
+                label="Date inserted"
+                render={(b) => (
+                  <span
+                    className="whitespace-nowrap font-mono text-[11px] text-muted-foreground"
+                    title={`Inserted on ${formatDateTime(b.created_at)}`}
+                  >
+                    {formatDate(b.created_at)}
+                  </span>
+                )}
               />
 
               <SectionRow>Performance</SectionRow>

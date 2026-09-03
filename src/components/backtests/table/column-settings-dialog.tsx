@@ -16,6 +16,7 @@ interface ColumnSettingsDialogProps {
   columnPinning: { left?: string[]; right?: string[] };
   onPinningChange: (colId: string, position: "left" | "right" | false) => void;
   onResetToDefault: () => void;
+  columnsMetadata?: Array<{ id: string; label: string; defaultVisible: boolean; category: string }>;
 }
 
 export function ColumnSettingsDialog({
@@ -28,6 +29,7 @@ export function ColumnSettingsDialog({
   columnPinning,
   onPinningChange,
   onResetToDefault,
+  columnsMetadata,
 }: ColumnSettingsDialogProps) {
   // Move column up or down in order
   const moveColumn = (colId: string, direction: "up" | "down") => {
@@ -43,7 +45,8 @@ export function ColumnSettingsDialog({
     onOrderChange(newOrder);
   };
 
-  const categories = Array.from(new Set(ALL_COLUMN_METADATA.map((c) => c.category)));
+  const metadata = columnsMetadata || ALL_COLUMN_METADATA;
+  const categories = Array.from(new Set(metadata.map((c) => c.category)));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +65,7 @@ export function ColumnSettingsDialog({
         <div className="space-y-6 pt-2">
           {/* Categories Grid */}
           {categories.map((category) => {
-            const cols = ALL_COLUMN_METADATA.filter((c) => c.category === category && c.id !== "select");
+            const cols = metadata.filter((c) => c.category === category && c.id !== "select");
             if (cols.length === 0) return null;
 
             return (

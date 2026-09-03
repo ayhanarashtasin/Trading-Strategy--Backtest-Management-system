@@ -39,6 +39,7 @@ export type BacktestSource =
   | 'Python'
   | 'Codex'
   | 'Manual'
+  | 'AggTrades'
   | 'Other';
 
 export type TestType =

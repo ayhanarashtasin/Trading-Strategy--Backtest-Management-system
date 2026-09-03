@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 const BACKTEST_SOURCES: BacktestSource[] = [
+  "AggTrades",
   "TradingView",
   "Freqtrade",
   "Python",

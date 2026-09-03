@@ -13,14 +13,18 @@ import {
   RowSelectionState,
   flexRender,
 } from "@tanstack/react-table";
-import { BacktestRow, createBacktestColumns, ALL_COLUMN_METADATA, getInitialVisibility } from "./column-definitions";
-import { ColumnSettingsDialog } from "./column-settings-dialog";
-import { BacktestDrawer } from "../drawer/backtest-drawer";
+import {
+  LeaderboardRow,
+  createLeaderboardColumns,
+  LEADERBOARD_COLUMN_METADATA,
+  getInitialLeaderboardVisibility,
+} from "@/components/backtests/table/column-definitions";
+import { ColumnSettingsDialog } from "@/components/backtests/table/column-settings-dialog";
+import { BacktestDrawer } from "@/components/backtests/drawer/backtest-drawer";
 import { useAuth } from "@/components/providers/auth-provider";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Sliders,
   Download,
@@ -33,38 +37,44 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Layers,
-  Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { TableRowsSkeleton } from "@/components/ui/skeleton";
+import { formatNumber, formatPercent, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
-interface BacktestsTableProps {
-  data: BacktestRow[];
+interface LeaderboardTableProps {
+  data: LeaderboardRow[];
   loading: boolean;
+  primaryMetric: string;
   onRefresh?: () => void;
 }
 
-const DEFAULT_COLUMN_ORDER = ALL_COLUMN_METADATA.map((c) => c.id);
+const DEFAULT_COLUMN_ORDER = LEADERBOARD_COLUMN_METADATA.map((c) => c.id);
 const DEFAULT_COLUMN_PINNING: ColumnPinningState = {
-  left: ["select", "strategy_name"],
+  left: ["rank", "select", "strategy_name"],
   right: ["details"],
 };
 
-export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps) {
+export function LeaderboardTable({
+  data,
+  loading,
+  primaryMetric,
+  onRefresh,
+}: LeaderboardTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
 
-  // Drawer state
-  const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<BacktestRow | null>(null);
+  // Drawer state for inspecting full backtest specification
+  const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<LeaderboardRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Column settings modal
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
 
   // TanStack Table states
-  const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(getInitialVisibility);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "rank", desc: false }]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(getInitialLeaderboardVisibility);
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(DEFAULT_COLUMN_ORDER);
   const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(DEFAULT_COLUMN_PINNING);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -76,17 +86,17 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
     async function loadUserPreferences() {
       if (!user?.id) return;
       try {
-        const { data: pref, error } = await supabase
+        const { data: pref } = await supabase
           .from("user_table_preferences")
           .select("*")
           .eq("user_id", user.id)
-          .eq("table_id", "backtests")
+          .eq("table_id", "leaderboard")
           .maybeSingle();
 
         if (pref) {
           if (pref.column_visibility && Object.keys(pref.column_visibility).length > 0) {
             setColumnVisibility({
-              ...getInitialVisibility(),
+              ...getInitialLeaderboardVisibility(),
               ...pref.column_visibility,
               ...(pref.column_visibility.created_at === undefined ? { created_at: true } : {}),
             });
@@ -114,7 +124,7 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
           }
         }
       } catch (err) {
-        console.error("Load table prefs error:", err);
+        console.error("Load leaderboard table prefs error:", err);
       } finally {
         setPrefsLoaded(true);
       }
@@ -122,10 +132,18 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
     loadUserPreferences();
   }, [user?.id]);
 
-  /* 2. Save Table Preferences
-     Working through the column settings dialog fires one of these per
-     checkbox. Coalescing them means a burst of toggles costs a single write
-     once the user settles, and the UI never waits on the network to update. */
+  // Ensure active ranking metric is always visible
+  useEffect(() => {
+    if (primaryMetric && columnVisibility[primaryMetric] === false) {
+      setColumnVisibility((prev) => {
+        const updated = { ...prev, [primaryMetric]: true };
+        savePreferences(updated, columnOrder, columnPinning, pageSize);
+        return updated;
+      });
+    }
+  }, [primaryMetric]);
+
+  // Debounced save of preferences
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -148,7 +166,7 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
         await supabase.from("user_table_preferences").upsert(
           {
             user_id: user.id,
-            table_id: "backtests",
+            table_id: "leaderboard",
             column_visibility: newVis,
             column_order: newOrd,
             column_pinning: newPin,
@@ -159,7 +177,7 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
           { onConflict: "user_id,table_id" }
         );
       } catch (err) {
-        console.error("Save table prefs error:", err);
+        console.error("Save leaderboard table prefs error:", err);
       }
     }, 500);
   };
@@ -191,9 +209,9 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
   };
 
   const handleResetToDefault = () => {
-    const defaultVis = getInitialVisibility();
-    const defaultOrd = ALL_COLUMN_METADATA.map((c) => c.id);
-    const defaultPin = { left: ["select", "strategy_name"], right: ["details"] };
+    const defaultVis = getInitialLeaderboardVisibility();
+    const defaultOrd = LEADERBOARD_COLUMN_METADATA.map((c) => c.id);
+    const defaultPin = DEFAULT_COLUMN_PINNING;
 
     setColumnVisibility(defaultVis);
     setColumnOrder(defaultOrd);
@@ -204,13 +222,16 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
   };
 
   // Open Drawer handler
-  const handleViewDetails = useCallback((row: BacktestRow) => {
+  const handleViewDetails = useCallback((row: LeaderboardRow) => {
     setSelectedBacktestForDrawer(row);
     setDrawerOpen(true);
   }, []);
 
-  // Columns definition
-  const columns = useMemo(() => createBacktestColumns(handleViewDetails), [handleViewDetails]);
+  // Columns definition with active primaryMetric highlighting
+  const columns = useMemo(
+    () => createLeaderboardColumns(handleViewDetails, primaryMetric),
+    [handleViewDetails, primaryMetric]
+  );
 
   const table = useReactTable({
     data,
@@ -243,49 +264,30 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
   const selectedRows = table.getSelectedRowModel().rows;
   const selectedIds = selectedRows.map((r) => r.original.id);
 
+  // Check if current sort is not the default Rank sort
+  const isSortedByCustom = sorting.length > 0 && (sorting[0].id !== "rank" || sorting[0].desc);
+
   // CSV Export handler
   const handleExportCSV = () => {
     if (data.length === 0) return;
 
-    const headers = [
-      "Strategy",
-      "Version",
-      "Backtest Name",
-      "Symbol",
-      "Timeframe",
-      "Source",
-      "Test Type",
-      "Start Date",
-      "End Date",
-      "Trades",
-      "Profit Factor",
-      "Net Profit %",
-      "Max Drawdown %",
-      "Win Rate %",
-      "Avg Trade %",
-      "Sharpe",
-      "Sortino",
-    ];
+    // Export all visible columns
+    const visibleCols = table.getVisibleLeafColumns().filter((c) => c.id !== "select" && c.id !== "details");
+    const headers = visibleCols.map((c) => {
+      const meta = LEADERBOARD_COLUMN_METADATA.find((m) => m.id === c.id);
+      return meta ? meta.label : c.id;
+    });
 
-    const rows = data.map((b) => [
-      `"${(b.strategy_name || "").replace(/"/g, '""')}"`,
-      `"${(b.version_name || "").replace(/"/g, '""')}"`,
-      `"${(b.backtest_name || "").replace(/"/g, '""')}"`,
-      `"${b.symbol}"`,
-      `"${b.timeframe}"`,
-      `"${b.source}"`,
-      `"${b.test_type}"`,
-      `"${b.start_date}"`,
-      `"${b.end_date}"`,
-      b.total_trades ?? "",
-      b.profit_factor ?? "",
-      b.net_profit_percent ?? "",
-      b.max_drawdown_percent ?? "",
-      b.win_rate_percent ?? "",
-      b.average_trade_percent ?? "",
-      b.sharpe_ratio ?? "",
-      b.sortino_ratio ?? "",
-    ]);
+    const rows = data.map((row) => {
+      return visibleCols.map((c) => {
+        const id = c.id;
+        const val = (row as any)[id];
+        if (val === null || val === undefined) return '""';
+        if (typeof val === "boolean") return `"${val ? "Yes" : "No"}"`;
+        if (typeof val === "number") return `"${val}"`;
+        return `"${String(val).replace(/"/g, '""')}"`;
+      });
+    });
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -294,7 +296,7 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `escanor_backtests_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `escanor_leaderboard_${primaryMetric}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -315,8 +317,21 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
           ) : (
             <span className="font-mono text-[11px] text-muted-foreground">
               <span className="font-semibold text-foreground">{data.length}</span>{" "}
-              backtest{data.length === 1 ? "" : "s"}
+              ranked backtest{data.length === 1 ? "" : "s"}
             </span>
+          )}
+
+          {isSortedByCustom && (
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setSorting([{ id: "rank", desc: false }])}
+              className="gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+              title="Reset sorting back to ranking order"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset to rank order
+            </Button>
           )}
         </div>
 
@@ -430,8 +445,8 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
                     colSpan={columns.length}
                     className="py-16 text-center text-xs text-muted-foreground"
                   >
-                    No backtests match these filters. Widen a range or clear the
-                    search.
+                    No backtests clear these thresholds. Lower the minimum sample
+                    size or widen the source filter.
                   </td>
                 </tr>
               ) : (
@@ -471,7 +486,10 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
                                 : ""
                           }`}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
                         </td>
                       );
                     })}
@@ -481,94 +499,93 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
             </tbody>
           </table>
         </div>
-
-        {/* Table Pagination Bar */}
-        <div className="flex flex-col gap-3 border-t border-border bg-muted/40 px-4 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[11px] text-muted-foreground">
-            Page{" "}
-            <span className="font-semibold text-foreground">
-              {table.getState().pagination.pageIndex + 1}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-foreground">
-              {Math.max(1, table.getPageCount())}
-            </span>{" "}
-            &middot; {data.length} rows
-          </p>
-
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="eyebrow">Rows</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setPageSize(newSize);
-                  table.setPageSize(newSize);
-                  savePreferences(columnVisibility, columnOrder, columnPinning, newSize);
-                }}
-                className="rounded border border-input bg-card px-1.5 py-0.5 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {[25, 50, 100, 250].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronsLeft className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronsRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
       </Card>
 
-      {/* Column Settings Modal */}
+      {/* Pagination & Footer Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span>Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              const newSize = Number(e.target.value);
+              setPageSize(newSize);
+              savePreferences(columnVisibility, columnOrder, columnPinning, newSize);
+            }}
+            className="rounded border border-input bg-card px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
+          >
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="1000">1,000</option>
+          </select>
+          <span className="pl-2 font-mono text-[11px]">
+            Showing {data.length === 0 ? 0 : table.getState().pagination.pageIndex * pageSize + 1} -{" "}
+            {Math.min((table.getState().pagination.pageIndex + 1) * pageSize, data.length)} of{" "}
+            <span className="font-semibold text-foreground">{data.length}</span> qualifying
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+            title="First page"
+          >
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            title="Previous page"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="px-2 font-mono text-[11px]">
+            Page {table.getPageCount() === 0 ? 1 : table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount() || 1}
+          </span>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            title="Next page"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+            title="Last page"
+          >
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Column Settings Modal Dialog */}
       <ColumnSettingsDialog
         open={columnSettingsOpen}
         onOpenChange={setColumnSettingsOpen}
-        columnVisibility={columnVisibility}
+        columnVisibility={columnVisibility as Record<string, boolean>}
         onVisibilityChange={handleVisibilityChange}
         columnOrder={columnOrder}
         onOrderChange={handleOrderChange}
         columnPinning={columnPinning}
         onPinningChange={handlePinningChange}
         onResetToDefault={handleResetToDefault}
+        columnsMetadata={LEADERBOARD_COLUMN_METADATA}
       />
 
-      {/* Right-Side Details Drawer */}
+      {/* Backtest Detail Slide-out Drawer */}
       <BacktestDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

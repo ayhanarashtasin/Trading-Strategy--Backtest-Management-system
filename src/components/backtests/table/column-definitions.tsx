@@ -1,3 +1,4 @@
+import React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Backtest } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
@@ -5,13 +6,17 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatPercent, formatNumber, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import Link from "next/link";
-import { Eye, ArrowUpDown, ArrowUp, ArrowDown, Pin } from "lucide-react";
+import { Eye, Trophy } from "lucide-react";
 
 export interface BacktestRow extends Backtest {
   strategy_name?: string;
   strategy_id?: string;
   version_name?: string;
   creator_name?: string;
+}
+
+export interface LeaderboardRow extends BacktestRow {
+  rank: number;
 }
 
 export const ALL_COLUMN_METADATA = [
@@ -37,18 +42,11 @@ export const ALL_COLUMN_METADATA = [
   { id: "net_profit_percent", label: "Net Profit %", defaultVisible: true, category: "Performance" },
   { id: "details", label: "Details", defaultVisible: true, category: "General" },
   { id: "creator_name", label: "Created By", defaultVisible: true, category: "Auditing" },
+  { id: "created_at", label: "Date Added", defaultVisible: true, category: "Auditing" },
 
-  // Hidden by default
-  { id: "exchange", label: "Exchange", defaultVisible: false, category: "Market" },
-  { id: "market_type", label: "Market Type", defaultVisible: false, category: "Market" },
-  { id: "direction", label: "Direction", defaultVisible: false, category: "Market" },
-  { id: "higher_timeframe", label: "Higher TF", defaultVisible: false, category: "Market" },
-  { id: "intrabar_timeframe", label: "Intrabar TF", defaultVisible: false, category: "Market" },
-  { id: "data_source", label: "Data Source", defaultVisible: false, category: "Market" },
-  { id: "fee_per_side_percent", label: "Fee Per Side %", defaultVisible: false, category: "Execution" },
-  { id: "slippage_per_side_percent", label: "Slippage %", defaultVisible: false, category: "Execution" },
-  { id: "starting_capital", label: "Starting Capital", defaultVisible: false, category: "Execution" },
-  { id: "leverage", label: "Leverage", defaultVisible: false, category: "Execution" },
+  // Additional performance & metrics
+  { id: "net_profit_amount", label: "Net Profit $", defaultVisible: false, category: "Performance" },
+  { id: "expectancy_percent", label: "Expectancy %", defaultVisible: false, category: "Performance" },
   { id: "cagr_percent", label: "CAGR %", defaultVisible: false, category: "Performance" },
   { id: "sharpe_ratio", label: "Sharpe", defaultVisible: false, category: "Performance" },
   { id: "sortino_ratio", label: "Sortino", defaultVisible: false, category: "Performance" },
@@ -59,8 +57,42 @@ export const ALL_COLUMN_METADATA = [
   { id: "average_loss_percent", label: "Avg Loss %", defaultVisible: false, category: "Performance" },
   { id: "largest_win_percent", label: "Largest Win %", defaultVisible: false, category: "Performance" },
   { id: "largest_loss_percent", label: "Largest Loss %", defaultVisible: false, category: "Performance" },
-  { id: "created_at", label: "Created At", defaultVisible: false, category: "Auditing" },
+  { id: "long_trades", label: "Long Trades", defaultVisible: false, category: "Performance" },
+  { id: "short_trades", label: "Short Trades", defaultVisible: false, category: "Performance" },
+  { id: "winning_trades", label: "Win Trades", defaultVisible: false, category: "Performance" },
+  { id: "losing_trades", label: "Loss Trades", defaultVisible: false, category: "Performance" },
+  { id: "average_trade_duration", label: "Avg Duration", defaultVisible: false, category: "Performance" },
+
+  // Market
+  { id: "exchange", label: "Exchange", defaultVisible: false, category: "Market" },
+  { id: "market_type", label: "Market Type", defaultVisible: false, category: "Market" },
+  { id: "direction", label: "Direction", defaultVisible: false, category: "Market" },
+  { id: "higher_timeframe", label: "Higher TF", defaultVisible: false, category: "Market" },
+  { id: "intrabar_timeframe", label: "Intrabar TF", defaultVisible: false, category: "Market" },
+  { id: "data_source", label: "Data Source", defaultVisible: false, category: "Market" },
+
+  // Execution
+  { id: "fee_per_side_percent", label: "Fee Per Side %", defaultVisible: false, category: "Execution" },
+  { id: "slippage_per_side_percent", label: "Slippage %", defaultVisible: false, category: "Execution" },
+  { id: "starting_capital", label: "Starting Capital", defaultVisible: false, category: "Execution" },
+  { id: "leverage", label: "Leverage", defaultVisible: false, category: "Execution" },
+  { id: "position_size_percent", label: "Position Size %", defaultVisible: false, category: "Execution" },
+  { id: "compounding", label: "Compounding", defaultVisible: false, category: "Execution" },
+  { id: "funding_included", label: "Funding Included", defaultVisible: false, category: "Execution" },
+
+  // Integrity
+  { id: "oos_tested", label: "OOS Tested", defaultVisible: false, category: "Integrity" },
+  { id: "fees_included", label: "Fees Included", defaultVisible: false, category: "Integrity" },
+  { id: "slippage_included", label: "Slippage Included", defaultVisible: false, category: "Integrity" },
+  { id: "intrabar_simulation", label: "Intrabar Sim", defaultVisible: false, category: "Integrity" },
+
+  // Auditing
   { id: "updated_at", label: "Updated At", defaultVisible: false, category: "Auditing" },
+];
+
+export const LEADERBOARD_COLUMN_METADATA = [
+  { id: "rank", label: "Rank", defaultVisible: true, category: "Ranking" },
+  ...ALL_COLUMN_METADATA,
 ];
 
 export function getInitialVisibility(): Record<string, boolean> {
@@ -71,7 +103,32 @@ export function getInitialVisibility(): Record<string, boolean> {
   return vis;
 }
 
-export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void): ColumnDef<BacktestRow>[] {
+export function getInitialLeaderboardVisibility(): Record<string, boolean> {
+  const vis: Record<string, boolean> = {
+    rank: true,
+  };
+  ALL_COLUMN_METADATA.forEach((col) => {
+    vis[col.id] = col.defaultVisible;
+  });
+  return vis;
+}
+
+function renderRankedHeader(label: string, isRanked: boolean) {
+  if (!isRanked) return label;
+  return (
+    <div className="flex items-center gap-1 font-semibold text-primary">
+      <span>{label}</span>
+      <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+        Ranked
+      </span>
+    </div>
+  );
+}
+
+export function createBaseColumns<T extends BacktestRow>(
+  onViewDetails: (row: T) => void,
+  primaryMetric?: string
+): ColumnDef<T>[] {
   return [
     // 1. Select Checkbox
     {
@@ -135,6 +192,7 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       header: "Backtest Name",
       cell: ({ row }) => (
         <button
+          type="button"
           onClick={() => onViewDetails(row.original)}
           className="font-semibold text-foreground hover:text-primary hover:underline text-left truncate block max-w-[180px]"
         >
@@ -229,7 +287,7 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 95,
     },
 
-    // 11b. Duration Days (Numeric sorting)
+    // 11b. Duration Days
     {
       id: "duration_days",
       accessorFn: (row) => {
@@ -257,32 +315,32 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 75,
     },
 
-    // 12. Trades (Numeric sorting)
+    // 12. Trades
     {
       id: "total_trades",
       accessorKey: "total_trades",
-      header: "Trades",
+      header: () => renderRankedHeader("Trades", primaryMetric === "total_trades"),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className="text-right font-mono text-muted-foreground">
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "total_trades" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
           {formatNumber(row.original.total_trades, 0)}
         </div>
       ),
       size: 80,
     },
 
-    // 13. Profit Factor (Numeric sorting)
+    // 13. Profit Factor
     {
       id: "profit_factor",
       accessorKey: "profit_factor",
-      header: "PF",
+      header: () => renderRankedHeader("PF", primaryMetric === "profit_factor"),
       sortingFn: "basic",
       cell: ({ row }) => {
         const pf = row.original.profit_factor;
         if (pf === null || pf === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(pf);
         return (
-          <div className={`text-right font-mono font-semibold ${num >= 1.2 ? "text-profit" : num >= 1.0 ? "text-foreground" : "text-loss"}`}>
+          <div className={`text-right font-mono font-semibold ${num >= 1.2 ? "text-profit" : num >= 1.0 ? "text-foreground" : "text-loss"} ${primaryMetric === "profit_factor" ? "bg-primary/[0.05]" : ""}`}>
             {num.toFixed(2)}
           </div>
         );
@@ -290,18 +348,18 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 75,
     },
 
-    // 14. Avg Trade % (Numeric sorting)
+    // 14. Avg Trade %
     {
       id: "average_trade_percent",
       accessorKey: "average_trade_percent",
-      header: "Avg Trade",
+      header: () => renderRankedHeader("Avg Trade", primaryMetric === "average_trade_percent"),
       sortingFn: "basic",
       cell: ({ row }) => {
         const val = row.original.average_trade_percent;
         if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(val);
         return (
-          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"}`}>
+          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"} ${primaryMetric === "average_trade_percent" ? "bg-primary/[0.05] font-semibold" : ""}`}>
             {formatPercent(num, 3)}
           </div>
         );
@@ -309,7 +367,7 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 90,
     },
 
-    // 14b. Median Trade % (Numeric sorting)
+    // 14b. Median Trade %
     {
       id: "median_trade_percent",
       accessorKey: "median_trade_percent",
@@ -328,14 +386,14 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 95,
     },
 
-    // 15. Win Rate % (Numeric sorting)
+    // 15. Win Rate %
     {
       id: "win_rate_percent",
       accessorKey: "win_rate_percent",
-      header: "Win Rate",
+      header: () => renderRankedHeader("Win Rate", primaryMetric === "win_rate_percent"),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className="text-right font-mono text-muted-foreground">
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "win_rate_percent" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
           {formatPercent(row.original.win_rate_percent)}
         </div>
       ),
@@ -346,42 +404,42 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
     {
       id: "payoff_ratio",
       accessorKey: "payoff_ratio",
-      header: "Payoff",
+      header: () => renderRankedHeader("Payoff", primaryMetric === "payoff_ratio"),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className="text-right font-mono text-muted-foreground">
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "payoff_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
           {row.original.payoff_ratio ? Number(row.original.payoff_ratio).toFixed(2) : "N/A"}
         </div>
       ),
       size: 75,
     },
 
-    // 17. Max Drawdown % (Numeric sorting)
+    // 17. Max Drawdown %
     {
       id: "max_drawdown_percent",
       accessorKey: "max_drawdown_percent",
-      header: "Max DD",
+      header: () => renderRankedHeader("Max DD", primaryMetric === "max_drawdown_percent"),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className="text-right font-mono text-loss">
+        <div className={`text-right font-mono text-loss ${primaryMetric === "max_drawdown_percent" ? "bg-primary/[0.05] font-semibold" : ""}`}>
           {formatPercent(row.original.max_drawdown_percent)}
         </div>
       ),
       size: 85,
     },
 
-    // 18. Net Profit % (Numeric sorting)
+    // 18. Net Profit %
     {
       id: "net_profit_percent",
       accessorKey: "net_profit_percent",
-      header: "Return",
+      header: () => renderRankedHeader("Return", primaryMetric === "net_profit_percent"),
       sortingFn: "basic",
       cell: ({ row }) => {
         const val = row.original.net_profit_percent;
         if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(val);
         return (
-          <div className={`text-right font-mono font-semibold ${num >= 0 ? "text-profit" : "text-loss"}`}>
+          <div className={`text-right font-mono font-semibold ${num >= 0 ? "text-profit" : "text-loss"} ${primaryMetric === "net_profit_percent" ? "bg-primary/[0.05]" : ""}`}>
             {num >= 0 ? "+" : ""}{formatPercent(num)}
           </div>
         );
@@ -389,7 +447,7 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 95,
     },
 
-    // 19. Details Drawer Button (Section 67)
+    // Details Drawer Button
     {
       id: "details",
       header: "Details",
@@ -408,7 +466,7 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       enableSorting: false,
     },
 
-    // 20. Creator
+    // Creator
     {
       id: "creator_name",
       accessorKey: "creator_name",
@@ -421,7 +479,239 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 100,
     },
 
-    // Hidden by default columns
+    // Date Added
+    {
+      id: "created_at",
+      accessorKey: "created_at",
+      header: "Date Added",
+      sortingFn: "datetime",
+      cell: ({ row }) => (
+        <span
+          className="font-mono text-muted-foreground text-[11px] whitespace-nowrap"
+          title={`Inserted into website on ${formatDateTime(row.original.created_at)}`}
+        >
+          {formatDate(row.original.created_at)}
+        </span>
+      ),
+      size: 110,
+    },
+
+    // Additional Performance & Statistics
+    {
+      id: "net_profit_amount",
+      accessorKey: "net_profit_amount",
+      header: "Net Profit $",
+      sortingFn: "basic",
+      cell: ({ row }) => {
+        const val = row.original.net_profit_amount;
+        if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
+        const num = Number(val);
+        return (
+          <div className={`text-right font-mono font-semibold ${num >= 0 ? "text-profit" : "text-loss"}`}>
+            {formatCurrency(num)}
+          </div>
+        );
+      },
+      size: 100,
+    },
+    {
+      id: "expectancy_percent",
+      accessorKey: "expectancy_percent",
+      header: "Expectancy %",
+      sortingFn: "basic",
+      cell: ({ row }) => {
+        const val = row.original.expectancy_percent;
+        if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
+        const num = Number(val);
+        return (
+          <div className={`text-right font-mono ${num >= 0 ? "text-profit" : "text-loss"}`}>
+            {formatPercent(num, 3)}
+          </div>
+        );
+      },
+      size: 95,
+    },
+    {
+      id: "cagr_percent",
+      accessorKey: "cagr_percent",
+      header: () => renderRankedHeader("CAGR %", primaryMetric === "cagr_percent"),
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "cagr_percent" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+          {formatPercent(row.original.cagr_percent)}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "sharpe_ratio",
+      accessorKey: "sharpe_ratio",
+      header: () => renderRankedHeader("Sharpe", primaryMetric === "sharpe_ratio"),
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "sharpe_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+          {row.original.sharpe_ratio ? Number(row.original.sharpe_ratio).toFixed(2) : "N/A"}
+        </div>
+      ),
+      size: 75,
+    },
+    {
+      id: "sortino_ratio",
+      accessorKey: "sortino_ratio",
+      header: () => renderRankedHeader("Sortino", primaryMetric === "sortino_ratio"),
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "sortino_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+          {row.original.sortino_ratio ? Number(row.original.sortino_ratio).toFixed(2) : "N/A"}
+        </div>
+      ),
+      size: 75,
+    },
+    {
+      id: "calmar_ratio",
+      accessorKey: "calmar_ratio",
+      header: () => renderRankedHeader("Calmar", primaryMetric === "calmar_ratio"),
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "calmar_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+          {row.original.calmar_ratio ? Number(row.original.calmar_ratio).toFixed(2) : "N/A"}
+        </div>
+      ),
+      size: 75,
+    },
+    {
+      id: "recovery_factor",
+      accessorKey: "recovery_factor",
+      header: () => renderRankedHeader("Recovery", primaryMetric === "recovery_factor"),
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "recovery_factor" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+          {row.original.recovery_factor ? Number(row.original.recovery_factor).toFixed(2) : "N/A"}
+        </div>
+      ),
+      size: 80,
+    },
+    {
+      id: "exposure_percent",
+      accessorKey: "exposure_percent",
+      header: "Exposure %",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-muted-foreground">
+          {formatPercent(row.original.exposure_percent)}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "average_win_percent",
+      accessorKey: "average_win_percent",
+      header: "Avg Win %",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-profit">
+          {row.original.average_win_percent != null ? formatPercent(row.original.average_win_percent) : "N/A"}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "average_loss_percent",
+      accessorKey: "average_loss_percent",
+      header: "Avg Loss %",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-loss">
+          {row.original.average_loss_percent != null ? formatPercent(row.original.average_loss_percent) : "N/A"}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "largest_win_percent",
+      accessorKey: "largest_win_percent",
+      header: "Largest Win %",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-profit">
+          {row.original.largest_win_percent != null ? formatPercent(row.original.largest_win_percent) : "N/A"}
+        </div>
+      ),
+      size: 95,
+    },
+    {
+      id: "largest_loss_percent",
+      accessorKey: "largest_loss_percent",
+      header: "Largest Loss %",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-loss">
+          {row.original.largest_loss_percent != null ? formatPercent(row.original.largest_loss_percent) : "N/A"}
+        </div>
+      ),
+      size: 95,
+    },
+    {
+      id: "long_trades",
+      accessorKey: "long_trades",
+      header: "Long Trades",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-muted-foreground">
+          {row.original.long_trades != null ? formatNumber(row.original.long_trades, 0) : "N/A"}
+        </div>
+      ),
+      size: 90,
+    },
+    {
+      id: "short_trades",
+      accessorKey: "short_trades",
+      header: "Short Trades",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-muted-foreground">
+          {row.original.short_trades != null ? formatNumber(row.original.short_trades, 0) : "N/A"}
+        </div>
+      ),
+      size: 90,
+    },
+    {
+      id: "winning_trades",
+      accessorKey: "winning_trades",
+      header: "Win Trades",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-profit">
+          {row.original.winning_trades != null ? formatNumber(row.original.winning_trades, 0) : "N/A"}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "losing_trades",
+      accessorKey: "losing_trades",
+      header: "Loss Trades",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-loss">
+          {row.original.losing_trades != null ? formatNumber(row.original.losing_trades, 0) : "N/A"}
+        </div>
+      ),
+      size: 85,
+    },
+    {
+      id: "average_trade_duration",
+      accessorKey: "average_trade_duration",
+      header: "Avg Duration",
+      cell: ({ row }) => (
+        <span className="font-mono text-muted-foreground text-[11px] truncate block">
+          {row.original.average_trade_duration || "N/A"}
+        </span>
+      ),
+      size: 95,
+    },
+
+    // Market details
     {
       id: "exchange",
       accessorKey: "exchange",
@@ -464,6 +754,8 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       cell: ({ row }) => <span className="text-muted-foreground text-[11px]">{row.original.data_source || "N/A"}</span>,
       size: 120,
     },
+
+    // Execution assumptions
     {
       id: "fee_per_side_percent",
       accessorKey: "fee_per_side_percent",
@@ -497,61 +789,78 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 75,
     },
     {
-      id: "cagr_percent",
-      accessorKey: "cagr_percent",
-      header: "CAGR %",
+      id: "position_size_percent",
+      accessorKey: "position_size_percent",
+      header: "Pos Size %",
       sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{formatPercent(row.original.cagr_percent)}</div>,
+      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.position_size_percent != null ? formatPercent(row.original.position_size_percent) : "N/A"}</div>,
       size: 85,
     },
     {
-      id: "sharpe_ratio",
-      accessorKey: "sharpe_ratio",
-      header: "Sharpe",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.sharpe_ratio ? Number(row.original.sharpe_ratio).toFixed(2) : "N/A"}</div>,
-      size: 75,
-    },
-    {
-      id: "sortino_ratio",
-      accessorKey: "sortino_ratio",
-      header: "Sortino",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.sortino_ratio ? Number(row.original.sortino_ratio).toFixed(2) : "N/A"}</div>,
-      size: 75,
-    },
-    {
-      id: "calmar_ratio",
-      accessorKey: "calmar_ratio",
-      header: "Calmar",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.calmar_ratio ? Number(row.original.calmar_ratio).toFixed(2) : "N/A"}</div>,
-      size: 75,
-    },
-    {
-      id: "recovery_factor",
-      accessorKey: "recovery_factor",
-      header: "Recovery",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.recovery_factor ? Number(row.original.recovery_factor).toFixed(2) : "N/A"}</div>,
-      size: 80,
-    },
-    {
-      id: "exposure_percent",
-      accessorKey: "exposure_percent",
-      header: "Exposure %",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{formatPercent(row.original.exposure_percent)}</div>,
+      id: "compounding",
+      accessorKey: "compounding",
+      header: "Compounding",
+      cell: ({ row }) => <span className="text-muted-foreground text-[11px]">{row.original.compounding ? "Yes" : "No"}</span>,
       size: 85,
     },
     {
-      id: "created_at",
-      accessorKey: "created_at",
-      header: "Created At",
-      sortingFn: "basic",
-      cell: ({ row }) => <span className="font-mono text-muted-foreground text-[11px]">{formatDateTime(row.original.created_at)}</span>,
-      size: 120,
+      id: "funding_included",
+      accessorKey: "funding_included",
+      header: "Funding Inc.",
+      cell: ({ row }) => <span className="text-muted-foreground text-[11px]">{row.original.funding_included ? "Yes" : "No"}</span>,
+      size: 85,
     },
+
+    // Integrity
+    {
+      id: "oos_tested",
+      accessorKey: "oos_tested",
+      header: "OOS",
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.oos_tested ? "outline" : "secondary"}
+          className={`font-mono text-[10px] ${row.original.oos_tested ? "text-profit border-profit/30 bg-profit/[0.06]" : "text-muted-foreground"}`}
+        >
+          {row.original.oos_tested ? "Yes" : "No"}
+        </Badge>
+      ),
+      size: 70,
+    },
+    {
+      id: "fees_included",
+      accessorKey: "fees_included",
+      header: "Fees Inc.",
+      cell: ({ row }) => (
+        <span className={`text-[11px] font-mono ${row.original.fees_included ? "text-profit" : "text-muted-foreground"}`}>
+          {row.original.fees_included ? "Yes" : "No"}
+        </span>
+      ),
+      size: 75,
+    },
+    {
+      id: "slippage_included",
+      accessorKey: "slippage_included",
+      header: "Slippage Inc.",
+      cell: ({ row }) => (
+        <span className={`text-[11px] font-mono ${row.original.slippage_included ? "text-profit" : "text-muted-foreground"}`}>
+          {row.original.slippage_included ? "Yes" : "No"}
+        </span>
+      ),
+      size: 85,
+    },
+    {
+      id: "intrabar_simulation",
+      accessorKey: "intrabar_simulation",
+      header: "Intrabar Sim",
+      cell: ({ row }) => (
+        <span className={`text-[11px] font-mono ${row.original.intrabar_simulation ? "text-profit" : "text-muted-foreground"}`}>
+          {row.original.intrabar_simulation ? "Yes" : "No"}
+        </span>
+      ),
+      size: 85,
+    },
+
+    // Auditing
     {
       id: "updated_at",
       accessorKey: "updated_at",
@@ -561,4 +870,49 @@ export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void)
       size: 120,
     },
   ];
+}
+
+export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void): ColumnDef<BacktestRow>[] {
+  return createBaseColumns<BacktestRow>(onViewDetails);
+}
+
+export function createLeaderboardColumns(
+  onViewDetails: (row: LeaderboardRow) => void,
+  primaryMetric?: string
+): ColumnDef<LeaderboardRow>[] {
+  const rankColumn: ColumnDef<LeaderboardRow> = {
+    id: "rank",
+    accessorKey: "rank",
+    header: () => (
+      <div className="flex items-center justify-center gap-1 font-semibold text-foreground">
+        <Trophy className="h-3 w-3 text-sun" />
+        <span>Rank</span>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const rank = row.original.rank;
+      return (
+        <div className="flex justify-center">
+          <span
+            className={
+              "flex h-6 w-7 items-center justify-center rounded font-mono text-[11px] tabular-nums " +
+              (rank === 1
+                ? "bg-sun/[0.15] text-sun ring-1 ring-inset ring-sun/30 font-bold"
+                : rank <= 3
+                  ? "bg-muted text-foreground ring-1 ring-inset ring-border font-semibold"
+                  : "text-muted-foreground font-medium")
+            }
+          >
+            {rank}
+          </span>
+        </div>
+      );
+    },
+    size: 55,
+    sortingFn: "basic",
+    enableResizing: false,
+  };
+
+  const baseCols = createBaseColumns<LeaderboardRow>(onViewDetails, primaryMetric);
+  return [rankColumn, ...baseCols];
 }

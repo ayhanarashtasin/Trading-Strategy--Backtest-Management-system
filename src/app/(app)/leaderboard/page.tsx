@@ -1,27 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import {
-  Trophy,
-  Medal,
-  Award,
-  TrendingUp,
-  Sliders,
-  Filter,
-  ArrowRight,
-  ExternalLink,
-  ShieldCheck,
-} from "lucide-react";
-import { formatPercent, formatNumber, formatDate } from "@/lib/utils";
-import { TableRowsSkeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X, RotateCcw } from "lucide-react";
 import { useCachedState, readQueryCache } from "@/lib/query-cache";
+import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
+import { BacktestRow, LeaderboardRow } from "@/components/backtests/table/column-definitions";
 
 type RankingMetric =
   | "profit_factor"
@@ -30,9 +18,11 @@ type RankingMetric =
   | "win_rate_percent"
   | "sharpe_ratio"
   | "sortino_ratio"
-  | "recovery_factor";
-
-import { Backtest } from "@/types/database";
+  | "recovery_factor"
+  | "calmar_ratio"
+  | "cagr_percent"
+  | "average_trade_percent"
+  | "total_trades";
 
 export default function LeaderboardPage() {
   const supabase = createClient();
@@ -45,46 +35,82 @@ export default function LeaderboardPage() {
     loading,
     setLoading,
     setIsRevalidating,
-  } = useCachedState<Backtest[]>("leaderboard:active", []);
+  } = useCachedState<BacktestRow[]>("leaderboard:active", []);
 
   // Leaderboard criteria
   const [primaryMetric, setPrimaryMetric] = useState<RankingMetric>("profit_factor");
   const [minTrades, setMinTrades] = useState<number>(100);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [dateAddedRange, setDateAddedRange] = useState<"all" | "today" | "7d" | "30d" | "90d" | "custom">("all");
+  const [dateAddedFrom, setDateAddedFrom] = useState("");
+  const [dateAddedTo, setDateAddedTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [oosOnly, setOosOnly] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
-      const hasCached = readQueryCache("leaderboard:active") !== undefined;
-      try {
-        if (hasCached) setIsRevalidating(true);
-        else setLoading(true);
-        const { data } = await supabase
-          .from("backtests")
-          .select(`
-            *,
-            strategy_version:strategy_versions(
-              id,
-              version_name,
-              strategy:strategies(id, name, strategy_family)
-            ),
-            creator:profiles!backtests_created_by_fkey(display_name)
-          `)
-          .is("archived_at", null);
+  const loadData = async () => {
+    const hasCached = readQueryCache("leaderboard:active") !== undefined;
+    try {
+      if (hasCached) setIsRevalidating(true);
+      else setLoading(true);
+      const { data, error } = await supabase
+        .from("backtests")
+        .select(`
+          *,
+          strategy_version:strategy_versions(
+            id,
+            version_name,
+            strategy:strategies(id, name, strategy_family)
+          ),
+          creator:profiles!backtests_created_by_fkey(display_name)
+        `)
+        .is("archived_at", null);
 
-        setBacktests(data || []);
-      } catch (err) {
-        console.error("Load leaderboard error:", err);
-      } finally {
-        setLoading(false);
-        setIsRevalidating(false);
-      }
+      if (error) throw error;
+
+      const transformed: BacktestRow[] = (data || []).map((b: any) => ({
+        ...b,
+        strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
+        strategy_id: b.strategy_version?.strategy?.id,
+        version_name: b.strategy_version?.version_name || "V1",
+        creator_name: b.creator?.display_name || "Analyst",
+      }));
+
+      setBacktests(transformed);
+    } catch (err) {
+      console.error("Load leaderboard error:", err);
+    } finally {
+      setLoading(false);
+      setIsRevalidating(false);
     }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
+  const hasActiveFilters =
+    primaryMetric !== "profit_factor" ||
+    minTrades !== 100 ||
+    sourceFilter !== "all" ||
+    dateAddedRange !== "all" ||
+    searchQuery.trim() !== "" ||
+    oosOnly;
+
+  const handleResetFilters = () => {
+    setPrimaryMetric("profit_factor");
+    setMinTrades(100);
+    setSourceFilter("all");
+    setDateAddedRange("all");
+    setDateAddedFrom("");
+    setDateAddedTo("");
+    setSearchQuery("");
+    setOosOnly(false);
+  };
+
   // Filter and rank backtests
-  const rankedBacktests = useMemo(() => {
+  const rankedBacktests = useMemo<LeaderboardRow[]>(() => {
+    const query = searchQuery.trim().toLowerCase();
+
     return backtests
       .filter((b) => {
         // Trade count threshold
@@ -97,79 +123,78 @@ export default function LeaderboardPage() {
           return false;
         }
 
+        // Date Added (Inserted into website) Filter
+        if (dateAddedRange !== "all" && b.created_at) {
+          const itemDate = new Date(b.created_at);
+          const now = new Date();
+          if (dateAddedRange === "today") {
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (itemDate < startOfToday) return false;
+          } else if (dateAddedRange === "7d") {
+            const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (itemDate < cutoff) return false;
+          } else if (dateAddedRange === "30d") {
+            const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (itemDate < cutoff) return false;
+          } else if (dateAddedRange === "90d") {
+            const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            if (itemDate < cutoff) return false;
+          } else if (dateAddedRange === "custom") {
+            if (dateAddedFrom) {
+              const from = new Date(dateAddedFrom + "T00:00:00");
+              if (itemDate < from) return false;
+            }
+            if (dateAddedTo) {
+              const to = new Date(dateAddedTo + "T23:59:59.999");
+              if (itemDate > to) return false;
+            }
+          }
+        }
+
+        // Symbol / Name / Strategy search
+        if (query) {
+          const matchSymbol = b.symbol?.toLowerCase().includes(query);
+          const matchName = b.backtest_name?.toLowerCase().includes(query);
+          const matchStrat = (b.strategy_name || "").toLowerCase().includes(query);
+          if (!matchSymbol && !matchName && !matchStrat) return false;
+        }
+
         // OOS Tested
         if (oosOnly && !b.oos_tested) {
           return false;
         }
 
-        // Metric must not be null
-        if (b[primaryMetric] === null || b[primaryMetric] === undefined) {
+        // Metric must not be null or undefined
+        const val = b[primaryMetric as keyof BacktestRow];
+        if (val === null || val === undefined) {
           return false;
         }
 
         return true;
       })
       .sort((a, b) => {
-        const valA = Number(a[primaryMetric]);
-        const valB = Number(b[primaryMetric]);
+        const valA = Number(a[primaryMetric as keyof BacktestRow]);
+        const valB = Number(b[primaryMetric as keyof BacktestRow]);
 
         // Max Drawdown is ranked lowest-first (smaller DD is superior)
         if (primaryMetric === "max_drawdown_percent") {
-          return valA - valB;
+          if (valA !== valB) return valA - valB;
+        } else {
+          if (valA !== valB) return valB - valA;
         }
 
-        // Other metrics ranked highest-first
-        return valB - valA;
-      });
-  }, [backtests, primaryMetric, minTrades, sourceFilter, oosOnly]);
+        // Deterministic tie-breaker: profit factor, then total trades
+        const pfA = Number(a.profit_factor) || 0;
+        const pfB = Number(b.profit_factor) || 0;
+        if (pfA !== pfB) return pfB - pfA;
 
-  /* Rank is a position in an ordered list, so it is set as a number. Only the
-     top three get emphasis, and it comes from weight, not from medals. */
-  const getRankBadge = (index: number) => (
-    <span
-      className={
-        "flex h-6 w-7 items-center justify-center rounded font-mono text-[11px] font-semibold tabular-nums " +
-        (index === 0
-          ? "bg-sun/[0.12] text-sun ring-1 ring-inset ring-sun/25"
-          : index < 3
-            ? "bg-muted text-foreground ring-1 ring-inset ring-border"
-            : "text-muted-foreground")
-      }
-    >
-      {index + 1}
-    </span>
-  );
-
-  const getMetricLabel = (m: RankingMetric) => {
-    switch (m) {
-      case "profit_factor":
-        return "Profit factor";
-      case "net_profit_percent":
-        return "Net return";
-      case "max_drawdown_percent":
-        return "Max drawdown";
-      case "win_rate_percent":
-        return "Win rate";
-      case "sharpe_ratio":
-        return "Sharpe";
-      case "sortino_ratio":
-        return "Sortino";
-      case "recovery_factor":
-        return "Recovery factor";
-    }
-  };
-
-  /* The ranked column already shows this metric, so the matching summary
-     column stands down rather than printing the same number twice. */
-  const showsSummary = (metric: RankingMetric) => primaryMetric !== metric;
-  const columnCount =
-    7 +
-    [
-      "profit_factor",
-      "net_profit_percent",
-      "max_drawdown_percent",
-      "win_rate_percent",
-    ].filter((m) => showsSummary(m as RankingMetric)).length;
+        return (b.total_trades || 0) - (a.total_trades || 0);
+      })
+      .map((b, index) => ({
+        ...b,
+        rank: index + 1,
+      }));
+  }, [backtests, primaryMetric, minTrades, sourceFilter, dateAddedRange, dateAddedFrom, dateAddedTo, searchQuery, oosOnly]);
 
   return (
     <div className="space-y-6">
@@ -198,6 +223,10 @@ export default function LeaderboardPage() {
               <option value="sharpe_ratio">Sharpe ratio</option>
               <option value="sortino_ratio">Sortino ratio</option>
               <option value="recovery_factor">Recovery factor</option>
+              <option value="calmar_ratio">Calmar ratio</option>
+              <option value="cagr_percent">CAGR %</option>
+              <option value="average_trade_percent">Avg trade return</option>
+              <option value="total_trades">Total trades</option>
             </Select>
           </div>
 
@@ -207,7 +236,7 @@ export default function LeaderboardPage() {
             <Select
               value={minTrades.toString()}
               onChange={(e) => setMinTrades(Number(e.target.value))}
-              className="h-8 w-32 text-xs"
+              className="h-8 w-28 text-xs"
               aria-label="Minimum sample size"
             >
               <option value="0">Any</option>
@@ -219,7 +248,7 @@ export default function LeaderboardPage() {
             </Select>
           </div>
 
-          {/* Source */}
+          {/* Source Filter */}
           <div className="flex items-center gap-2">
             <span className="eyebrow">Source</span>
             <Select
@@ -229,11 +258,75 @@ export default function LeaderboardPage() {
               aria-label="Filter by source"
             >
               <option value="all">All sources</option>
+              <option value="AggTrades">AggTrades</option>
               <option value="TradingView">TradingView</option>
               <option value="Freqtrade">Freqtrade</option>
               <option value="Python">Python</option>
               <option value="Codex">Codex</option>
+              <option value="Manual">Manual</option>
+              <option value="Other">Other</option>
             </Select>
+          </div>
+
+          {/* Date Added Filter */}
+          <div className="flex items-center gap-2">
+            <span className="eyebrow">Date added</span>
+            <Select
+              value={dateAddedRange}
+              onChange={(e) => setDateAddedRange(e.target.value as any)}
+              className="h-8 w-36 text-xs"
+              aria-label="Filter leaderboard by date added"
+            >
+              <option value="all">Any date added</option>
+              <option value="today">Added today</option>
+              <option value="7d">Added past 7 days</option>
+              <option value="30d">Added past 30 days</option>
+              <option value="90d">Added past 90 days</option>
+              <option value="custom">Custom date…</option>
+            </Select>
+          </div>
+
+          {dateAddedRange === "custom" && (
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                value={dateAddedFrom}
+                onChange={(e) => setDateAddedFrom(e.target.value)}
+                aria-label="Date added from"
+                className="h-8 w-32 font-mono text-xs px-2"
+                title="Date added from"
+              />
+              <span className="text-muted-foreground text-xs">to</span>
+              <Input
+                type="date"
+                value={dateAddedTo}
+                onChange={(e) => setDateAddedTo(e.target.value)}
+                aria-label="Date added to"
+                className="h-8 w-32 font-mono text-xs px-2"
+                title="Date added to"
+              />
+            </div>
+          )}
+
+          {/* Symbol / Name search */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Filter symbol / name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 w-44 pl-8 pr-7 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           {/* OOS Tested */}
@@ -246,6 +339,20 @@ export default function LeaderboardPage() {
             />
             <span>OOS tested only</span>
           </label>
+
+          {/* Reset button */}
+          {hasActiveFilters && (
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={handleResetFilters}
+              className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+              title="Reset filters to defaults"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset filters
+            </Button>
+          )}
         </div>
 
         <p className="pr-1 font-mono text-[11px] text-muted-foreground">
@@ -256,156 +363,13 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
-      {/* Ranked Leaderboard Table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="w-14 pl-5 text-center">Rank</th>
-                <th>Backtest</th>
-                <th>Market</th>
-                <th>Source</th>
-                <th className="text-right">Trades</th>
-                <th className="bg-primary/[0.06] text-right text-primary">
-                  {getMetricLabel(primaryMetric)}
-                </th>
-                {showsSummary("profit_factor") && (
-                  <th className="text-right">PF</th>
-                )}
-                {showsSummary("net_profit_percent") && (
-                  <th className="text-right">Return</th>
-                )}
-                {showsSummary("max_drawdown_percent") && (
-                  <th className="text-right">Max DD</th>
-                )}
-                {showsSummary("win_rate_percent") && (
-                  <th className="text-right">Win rate</th>
-                )}
-                <th className="pr-5 text-right">Open</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <TableRowsSkeleton rows={10} cols={columnCount} />
-              ) : rankedBacktests.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="py-16 text-center text-xs text-muted-foreground"
-                  >
-                    No backtests clear these thresholds. Lower the minimum
-                    sample size or widen the source filter.
-                  </td>
-                </tr>
-              ) : (
-                rankedBacktests.map((b, index) => {
-                  const strategy = b.strategy_version?.strategy;
-                  const version = b.strategy_version;
-
-                  return (
-                    <tr
-                      key={b.id}
-                      className="transition-colors hover:bg-accent/50"
-                    >
-                      <td className="pl-5">
-                        <div className="flex justify-center">
-                          {getRankBadge(index)}
-                        </div>
-                      </td>
-
-                      <td className="max-w-[18rem]">
-                        <Link
-                          href={`/backtests/${b.id}`}
-                          className="block truncate font-medium text-foreground hover:text-primary hover:underline"
-                        >
-                          {b.backtest_name}
-                        </Link>
-                        {strategy && (
-                          <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                            {strategy.name} {version?.version_name}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="whitespace-nowrap font-mono">
-                        <span className="font-semibold text-foreground">
-                          {b.symbol}
-                        </span>{" "}
-                        <span className="text-muted-foreground">
-                          {b.timeframe}
-                        </span>
-                      </td>
-
-                      <td>
-                        <Badge variant="outline" className="font-mono">
-                          {b.source}
-                        </Badge>
-                      </td>
-
-                      <td className="text-right font-mono text-muted-foreground">
-                        {formatNumber(b.total_trades, 0)}
-                      </td>
-
-                      {/* The metric being ranked on */}
-                      <td className="bg-primary/[0.05] text-right font-mono text-sm font-semibold text-foreground">
-                        {primaryMetric.includes("percent")
-                          ? formatPercent(b[primaryMetric])
-                          : primaryMetric.includes("trades")
-                          ? formatNumber(b[primaryMetric], 0)
-                          : Number(b[primaryMetric]).toFixed(2)}
-                      </td>
-
-                      {showsSummary("profit_factor") && (
-                        <td className="text-right font-mono text-foreground">
-                          {b.profit_factor != null
-                            ? Number(b.profit_factor).toFixed(2)
-                            : "N/A"}
-                        </td>
-                      )}
-
-                      {showsSummary("net_profit_percent") && (
-                        <td className="text-right">
-                          <span
-                            className={
-                              Number(b.net_profit_percent) >= 0
-                                ? "val-gain"
-                                : "val-loss"
-                            }
-                          >
-                            {formatPercent(b.net_profit_percent)}
-                          </span>
-                        </td>
-                      )}
-
-                      {showsSummary("max_drawdown_percent") && (
-                        <td className="text-right font-mono text-loss">
-                          {formatPercent(b.max_drawdown_percent)}
-                        </td>
-                      )}
-
-                      {showsSummary("win_rate_percent") && (
-                        <td className="text-right font-mono text-muted-foreground">
-                          {formatPercent(b.win_rate_percent)}
-                        </td>
-                      )}
-
-                      <td className="pr-5 text-right">
-                        <Link href={`/backtests/${b.id}`}>
-                          <Button size="xs" variant="outline">
-                            Open
-                            <ArrowRight className="h-2.5 w-2.5" />
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* TanStack-Powered Leaderboard Table with All Backtest Columns */}
+      <LeaderboardTable
+        data={rankedBacktests}
+        loading={loading}
+        primaryMetric={primaryMetric}
+        onRefresh={loadData}
+      />
     </div>
   );
 }
