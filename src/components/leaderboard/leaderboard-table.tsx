@@ -21,6 +21,7 @@ import {
 } from "@/components/backtests/table/column-definitions";
 import { ColumnSettingsDialog } from "@/components/backtests/table/column-settings-dialog";
 import { BacktestDrawer } from "@/components/backtests/drawer/backtest-drawer";
+import { MonthlyResultsModal } from "@/components/backtests/monthly-results-modal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,10 @@ export function LeaderboardTable({
   // Drawer state for inspecting full backtest specification
   const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<LeaderboardRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Monthly modal state
+  const [selectedBacktestForMonthly, setSelectedBacktestForMonthly] = useState<LeaderboardRow | null>(null);
+  const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
 
   // Column settings modal
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
@@ -227,10 +232,16 @@ export function LeaderboardTable({
     setDrawerOpen(true);
   }, []);
 
+  // Open Monthly handler
+  const handleViewMonthly = useCallback((row: LeaderboardRow) => {
+    setSelectedBacktestForMonthly(row);
+    setMonthlyModalOpen(true);
+  }, []);
+
   // Columns definition with active primaryMetric highlighting
   const columns = useMemo(
-    () => createLeaderboardColumns(handleViewDetails, primaryMetric),
-    [handleViewDetails, primaryMetric]
+    () => createLeaderboardColumns(handleViewDetails, primaryMetric, handleViewMonthly),
+    [handleViewDetails, primaryMetric, handleViewMonthly]
   );
 
   const table = useReactTable({
@@ -271,8 +282,10 @@ export function LeaderboardTable({
   const handleExportCSV = () => {
     if (data.length === 0) return;
 
-    // Export all visible columns
-    const visibleCols = table.getVisibleLeafColumns().filter((c) => c.id !== "select" && c.id !== "details");
+    // Export all visible columns (excluding action buttons)
+    const visibleCols = table
+      .getVisibleLeafColumns()
+      .filter((c) => c.id !== "select" && c.id !== "details" && c.id !== "monthly_results");
     const headers = visibleCols.map((c) => {
       const meta = LEADERBOARD_COLUMN_METADATA.find((m) => m.id === c.id);
       return meta ? meta.label : c.id;
@@ -590,6 +603,14 @@ export function LeaderboardTable({
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         backtest={selectedBacktestForDrawer}
+      />
+
+      {/* Month-by-Month Results Modal */}
+      <MonthlyResultsModal
+        open={monthlyModalOpen}
+        onOpenChange={setMonthlyModalOpen}
+        backtest={selectedBacktestForMonthly}
+        onChanged={onRefresh}
       />
     </div>
   );

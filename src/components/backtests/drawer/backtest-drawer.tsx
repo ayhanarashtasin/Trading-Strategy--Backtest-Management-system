@@ -29,6 +29,52 @@ import {
 } from "@/lib/utils";
 
 import { BacktestRow } from "../table/column-definitions";
+import { createClient } from "@/utils/supabase/client";
+import { BacktestMonthlyResult } from "@/types/database";
+import { MonthlyResultsTable } from "../monthly-results-table";
+
+function DrawerMonthlyTab({ backtestId }: { backtestId: string }) {
+  const supabase = createClient();
+  const [results, setResults] = React.useState<BacktestMonthlyResult[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchResults = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from("backtest_monthly_results")
+        .select("*")
+        .eq("backtest_id", backtestId)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
+      setResults(data || []);
+    } catch (err) {
+      console.error("Error fetching drawer monthly results:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [backtestId, supabase]);
+
+  React.useEffect(() => {
+    fetchResults();
+  }, [fetchResults]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10 text-muted-foreground">
+        <p className="text-xs">Loading monthly results...</p>
+      </div>
+    );
+  }
+
+  return (
+    <MonthlyResultsTable
+      backtestId={backtestId}
+      initialResults={results}
+      onChanged={fetchResults}
+    />
+  );
+}
 
 interface BacktestDrawerProps {
   open: boolean;
@@ -210,6 +256,10 @@ export function BacktestDrawer({
             <TabsTrigger value="metrics">
               <TrendingUp className="h-3.5 w-3.5" />
               All metrics
+            </TabsTrigger>
+            <TabsTrigger value="monthly">
+              <Calendar className="h-3.5 w-3.5" />
+              Monthly
             </TabsTrigger>
             <TabsTrigger value="notes">
               <MessageSquare className="h-3.5 w-3.5" />
@@ -415,6 +465,10 @@ export function BacktestDrawer({
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="monthly">
+            <DrawerMonthlyTab backtestId={backtest.id} />
           </TabsContent>
 
           <TabsContent value="notes">

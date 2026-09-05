@@ -7,13 +7,14 @@ import { SectionRule, Value } from "@/components/ui/metric";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/components/providers/auth-provider";
 import { createClient } from "@/utils/supabase/client";
-import { Backtest, StrategyVersion, BacktestYearlyResult } from "@/types/database";
+import { Backtest, StrategyVersion, BacktestYearlyResult, BacktestMonthlyResult } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { YearlyResultsTable } from "@/components/backtests/yearly-results-table";
+import { MonthlyResultsTable } from "@/components/backtests/monthly-results-table";
 import { NotesSection } from "@/components/shared/notes-section";
 import { AttachmentsSection } from "@/components/shared/attachments-section";
 import {
@@ -54,6 +55,7 @@ export default function BacktestDetailPage({
 
   const [backtest, setBacktest] = useState<any | null>(null);
   const [yearlyResults, setYearlyResults] = useState<BacktestYearlyResult[]>([]);
+  const [monthlyResults, setMonthlyResults] = useState<BacktestMonthlyResult[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -62,10 +64,11 @@ export default function BacktestDetailPage({
     try {
       setLoading(true);
 
-      /* Three independent reads, keyed on the same id — issue them together. */
+      /* Independent reads, keyed on the same id — issue them together. */
       const [
         { data: bt, error: btErr },
         { data: yrs },
+        { data: mons },
         { data: acts },
       ] = await Promise.all([
         supabase
@@ -99,6 +102,12 @@ export default function BacktestDetailPage({
           .eq("backtest_id", id)
           .order("year", { ascending: true }),
         supabase
+          .from("backtest_monthly_results")
+          .select("*")
+          .eq("backtest_id", id)
+          .order("year", { ascending: false })
+          .order("month", { ascending: false }),
+        supabase
           .from("activity_logs")
           .select("*, user:profiles(display_name)")
           .eq("entity_id", id)
@@ -109,6 +118,7 @@ export default function BacktestDetailPage({
 
       setBacktest(bt);
       setYearlyResults(yrs || []);
+      setMonthlyResults(mons || []);
       setActivityLogs(acts || []);
     } catch (err) {
       console.error("Backtest detail fetch error:", err);
@@ -403,6 +413,10 @@ export default function BacktestDetailPage({
               <Calendar className="h-3.5 w-3.5" />
               Yearly ({yearlyResults.length})
             </TabsTrigger>
+            <TabsTrigger value="monthly" className="gap-1.5 text-xs">
+              <Calendar className="h-3.5 w-3.5" />
+              Monthly ({monthlyResults.length})
+            </TabsTrigger>
             <TabsTrigger value="integrity" className="gap-1.5 text-xs">
               <ShieldCheck className="h-3.5 w-3.5" />
               Integrity
@@ -647,6 +661,15 @@ export default function BacktestDetailPage({
             <YearlyResultsTable
               backtestId={backtest.id}
               initialResults={yearlyResults}
+              onChanged={loadBacktestData}
+            />
+          </TabsContent>
+
+          {/* TAB 4B: MONTHLY RESULTS */}
+          <TabsContent value="monthly">
+            <MonthlyResultsTable
+              backtestId={backtest.id}
+              initialResults={monthlyResults}
               onChanged={loadBacktestData}
             />
           </TabsContent>

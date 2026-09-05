@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatPercent, formatNumber, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import Link from "next/link";
-import { Eye, Trophy } from "lucide-react";
+import { Eye, Trophy, Calendar } from "lucide-react";
 
 export interface BacktestRow extends Backtest {
   strategy_name?: string;
@@ -40,6 +40,7 @@ export const ALL_COLUMN_METADATA = [
   { id: "payoff_ratio", label: "Payoff Ratio", defaultVisible: true, category: "Performance" },
   { id: "max_drawdown_percent", label: "Max Drawdown %", defaultVisible: true, category: "Performance" },
   { id: "net_profit_percent", label: "Net Profit %", defaultVisible: true, category: "Performance" },
+  { id: "monthly_results", label: "Monthly Results", defaultVisible: true, category: "Performance" },
   { id: "details", label: "Details", defaultVisible: true, category: "General" },
   { id: "creator_name", label: "Created By", defaultVisible: true, category: "Auditing" },
   { id: "created_at", label: "Date Added", defaultVisible: true, category: "Auditing" },
@@ -127,7 +128,8 @@ function renderRankedHeader(label: string, isRanked: boolean) {
 
 export function createBaseColumns<T extends BacktestRow>(
   onViewDetails: (row: T) => void,
-  primaryMetric?: string
+  primaryMetric?: string,
+  onViewMonthly?: (row: T) => void
 ): ColumnDef<T>[] {
   return [
     // 1. Select Checkbox
@@ -445,6 +447,26 @@ export function createBaseColumns<T extends BacktestRow>(
         );
       },
       size: 95,
+    },
+
+    // Monthly Results Button
+    {
+      id: "monthly_results",
+      header: "Monthly",
+      cell: ({ row }) => (
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => (onViewMonthly ? onViewMonthly(row.original) : onViewDetails(row.original))}
+          className="h-6 gap-1 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10 border-primary/30"
+          title="View month-by-month results"
+        >
+          <Calendar className="h-3 w-3" />
+          View
+        </Button>
+      ),
+      size: 75,
+      enableSorting: false,
     },
 
     // Details Drawer Button
@@ -872,13 +894,17 @@ export function createBaseColumns<T extends BacktestRow>(
   ];
 }
 
-export function createBacktestColumns(onViewDetails: (row: BacktestRow) => void): ColumnDef<BacktestRow>[] {
-  return createBaseColumns<BacktestRow>(onViewDetails);
+export function createBacktestColumns(
+  onViewDetails: (row: BacktestRow) => void,
+  onViewMonthly?: (row: BacktestRow) => void
+): ColumnDef<BacktestRow>[] {
+  return createBaseColumns<BacktestRow>(onViewDetails, undefined, onViewMonthly);
 }
 
 export function createLeaderboardColumns(
   onViewDetails: (row: LeaderboardRow) => void,
-  primaryMetric?: string
+  primaryMetric?: string,
+  onViewMonthly?: (row: LeaderboardRow) => void
 ): ColumnDef<LeaderboardRow>[] {
   const rankColumn: ColumnDef<LeaderboardRow> = {
     id: "rank",
@@ -913,6 +939,6 @@ export function createLeaderboardColumns(
     enableResizing: false,
   };
 
-  const baseCols = createBaseColumns<LeaderboardRow>(onViewDetails, primaryMetric);
+  const baseCols = createBaseColumns<LeaderboardRow>(onViewDetails, primaryMetric, onViewMonthly);
   return [rankColumn, ...baseCols];
 }

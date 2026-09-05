@@ -210,8 +210,26 @@ export interface Backtest {
   creator?: Profile | null;
   updater?: Profile | null;
   yearly_results?: BacktestYearlyResult[];
+  monthly_results?: BacktestMonthlyResult[];
   research_notes?: ResearchNote[];
   attachments?: Attachment[];
+}
+
+export interface BacktestMonthlyResult {
+  id: string;
+  backtest_id: string;
+  year: number;
+  month: number;
+  trades: number | null;
+  net_profit_percent: number | null;
+  net_profit_amount: number | null;
+  profit_factor: number | null;
+  win_rate_percent: number | null;
+  average_trade_percent: number | null;
+  max_drawdown_percent: number | null;
+  winning_trades: number | null;
+  losing_trades: number | null;
+  created_at: string;
 }
 
 export interface BacktestYearlyResult {

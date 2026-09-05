@@ -8,9 +8,20 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  className?: string;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+const sizeClasses: Record<NonNullable<DialogProps["size"]>, string> = {
+  sm: "max-w-sm",
+  md: "max-w-lg",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
+  "2xl": "max-w-6xl",
+  full: "max-w-[95vw]",
+};
+
+export function Dialog({ open, onOpenChange, children, size = "md", className }: DialogProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) {
@@ -27,7 +38,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
     >
       {/* On a light ground the scrim is tinted ink, not black — black reads as
           a hole punched in the page. */}
@@ -35,7 +46,13 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         className="fixed inset-0 bg-foreground/25 backdrop-blur-[2px] animate-in fade-in duration-150"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 w-full max-w-lg p-4 animate-in fade-in zoom-in-95 duration-150">
+      <div
+        className={cn(
+          "relative z-50 w-full p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-150",
+          sizeClasses[size],
+          className
+        )}
+      >
         {children}
       </div>
     </div>

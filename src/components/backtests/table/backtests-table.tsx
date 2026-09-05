@@ -16,6 +16,7 @@ import {
 import { BacktestRow, createBacktestColumns, ALL_COLUMN_METADATA, getInitialVisibility } from "./column-definitions";
 import { ColumnSettingsDialog } from "./column-settings-dialog";
 import { BacktestDrawer } from "../drawer/backtest-drawer";
+import { MonthlyResultsModal } from "../monthly-results-modal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,10 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
   // Drawer state
   const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<BacktestRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Monthly modal state
+  const [selectedBacktestForMonthly, setSelectedBacktestForMonthly] = useState<BacktestRow | null>(null);
+  const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
 
   // Column settings modal
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
@@ -209,8 +214,17 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
     setDrawerOpen(true);
   }, []);
 
+  // Open Monthly handler
+  const handleViewMonthly = useCallback((row: BacktestRow) => {
+    setSelectedBacktestForMonthly(row);
+    setMonthlyModalOpen(true);
+  }, []);
+
   // Columns definition
-  const columns = useMemo(() => createBacktestColumns(handleViewDetails), [handleViewDetails]);
+  const columns = useMemo(
+    () => createBacktestColumns(handleViewDetails, handleViewMonthly),
+    [handleViewDetails, handleViewMonthly]
+  );
 
   const table = useReactTable({
     data,
@@ -573,6 +587,14 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         backtest={selectedBacktestForDrawer}
+      />
+
+      {/* Month-by-Month Results Modal */}
+      <MonthlyResultsModal
+        open={monthlyModalOpen}
+        onOpenChange={setMonthlyModalOpen}
+        backtest={selectedBacktestForMonthly}
+        onChanged={onRefresh}
       />
     </div>
   );
