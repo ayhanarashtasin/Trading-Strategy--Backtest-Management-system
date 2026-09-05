@@ -50,28 +50,41 @@ function CompareContent() {
       try {
         if (hasCached) setIsRevalidating(true);
         else setLoading(true);
-        const { data } = await supabase
-          .from("backtests")
-          .select(`
-            *,
-            strategy_version:strategy_versions(
-              id,
-              version_name,
-              strategy:strategies(id, name, strategy_family)
-            )
-          `)
-          .is("archived_at", null)
-          .order("created_at", { ascending: false });
+        const PAGE_SIZE = 1000;
+        let allRows: any[] = [];
+        let from = 0;
 
-        setAllBacktests(data || []);
+        while (true) {
+          const { data, error } = await supabase
+            .from("backtests")
+            .select(`
+              *,
+              strategy_version:strategy_versions(
+                id,
+                version_name,
+                strategy:strategies(id, name, strategy_family)
+              )
+            `)
+            .is("archived_at", null)
+            .order("created_at", { ascending: false })
+            .range(from, from + PAGE_SIZE - 1);
+
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          allRows.push(...data);
+          if (data.length < PAGE_SIZE) break;
+          from += PAGE_SIZE;
+        }
+
+        setAllBacktests(allRows);
 
         const idsParam = searchParams.get("ids");
         if (idsParam) {
           const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
-          const matched = (data || []).filter((b: Backtest) => ids.includes(b.id));
+          const matched = allRows.filter((b: Backtest) => ids.includes(b.id));
           setSelectedBacktests(matched);
-        } else if (data && data.length >= 2) {
-          setSelectedBacktests(data.slice(0, 2));
+        } else if (allRows.length >= 2) {
+          setSelectedBacktests(allRows.slice(0, 2));
         }
       } catch (err) {
         console.error("Load compare data error:", err);

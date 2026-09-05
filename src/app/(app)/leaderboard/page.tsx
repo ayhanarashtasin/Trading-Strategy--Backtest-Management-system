@@ -52,22 +52,35 @@ export default function LeaderboardPage() {
     try {
       if (hasCached) setIsRevalidating(true);
       else setLoading(true);
-      const { data, error } = await supabase
-        .from("backtests")
-        .select(`
-          *,
-          strategy_version:strategy_versions(
-            id,
-            version_name,
-            strategy:strategies(id, name, strategy_family)
-          ),
-          creator:profiles!backtests_created_by_fkey(display_name)
-        `)
-        .is("archived_at", null);
 
-      if (error) throw error;
+      const PAGE_SIZE = 1000;
+      let allRows: any[] = [];
+      let from = 0;
 
-      const transformed: BacktestRow[] = (data || []).map((b: any) => ({
+      while (true) {
+        const { data, error } = await supabase
+          .from("backtests")
+          .select(`
+            *,
+            strategy_version:strategy_versions(
+              id,
+              version_name,
+              strategy:strategies(id, name, strategy_family)
+            ),
+            creator:profiles!backtests_created_by_fkey(display_name)
+          `)
+          .is("archived_at", null)
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+
+      const transformed: BacktestRow[] = allRows.map((b: any) => ({
         ...b,
         strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
         strategy_id: b.strategy_version?.strategy?.id,
@@ -124,12 +137,14 @@ export default function LeaderboardPage() {
         }
 
         // Date Added (Inserted into website) Filter
-        if (dateAddedRange !== "all" && b.created_at) {
+        if (dateAddedRange !== "all") {
+          if (!b.created_at) return false;
           const itemDate = new Date(b.created_at);
           const now = new Date();
           if (dateAddedRange === "today") {
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            if (itemDate < startOfToday) return false;
+            const within24Hours = (now.getTime() - itemDate.getTime()) <= 24 * 60 * 60 * 1000 && (now.getTime() - itemDate.getTime()) >= 0;
+            if (itemDate < startOfToday && !within24Hours) return false;
           } else if (dateAddedRange === "7d") {
             const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             if (itemDate < cutoff) return false;

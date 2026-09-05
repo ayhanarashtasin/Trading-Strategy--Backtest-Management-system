@@ -63,34 +63,45 @@ function BacktestsPageContent() {
     try {
       if (hasCached) setIsRevalidating(true);
       else setLoading(true);
-      let query = supabase
-        .from("backtests")
-        .select(`
-          *,
-          strategy_version:strategy_versions(
-            id,
-            version_name,
-            strategy:strategies(
-              id,
-              name,
-              strategy_family
-            )
-          ),
-          creator:profiles!backtests_created_by_fkey(display_name)
-        `)
-        .order("created_at", { ascending: false });
+      const PAGE_SIZE = 1000;
+      let allRows: any[] = [];
+      let from = 0;
 
-      if (filters.showArchived) {
-        query = query.not("archived_at", "is", null);
-      } else {
-        query = query.is("archived_at", null);
+      while (true) {
+        let query = supabase
+          .from("backtests")
+          .select(`
+            *,
+            strategy_version:strategy_versions(
+              id,
+              version_name,
+              strategy:strategies(
+                id,
+                name,
+                strategy_family
+              )
+            ),
+            creator:profiles!backtests_created_by_fkey(display_name)
+          `)
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (filters.showArchived) {
+          query = query.not("archived_at", "is", null);
+        } else {
+          query = query.is("archived_at", null);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
       // Transform rows for flat TanStack table access
-      const transformed: BacktestRow[] = (data || []).map((b: any) => ({
+      const transformed: BacktestRow[] = allRows.map((b: any) => ({
         ...b,
         strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
         strategy_id: b.strategy_version?.strategy?.id,
