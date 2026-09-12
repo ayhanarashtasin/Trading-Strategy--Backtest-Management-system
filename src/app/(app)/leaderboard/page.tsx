@@ -40,6 +40,7 @@ export default function LeaderboardPage() {
   // Leaderboard criteria
   const [primaryMetric, setPrimaryMetric] = useState<RankingMetric>("profit_factor");
   const [minTrades, setMinTrades] = useState<number>(100);
+  const [symbolFilter, setSymbolFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateAddedRange, setDateAddedRange] = useState<"all" | "today" | "7d" | "30d" | "90d" | "custom">("all");
   const [dateAddedFrom, setDateAddedFrom] = useState("");
@@ -101,9 +102,19 @@ export default function LeaderboardPage() {
     loadData();
   }, []);
 
+  // Extract unique available symbols for the dropdown filter
+  const availableSymbols = useMemo(() => {
+    const set = new Set<string>();
+    backtests.forEach((b) => {
+      if (b.symbol) set.add(b.symbol);
+    });
+    return Array.from(set).sort();
+  }, [backtests]);
+
   const hasActiveFilters =
     primaryMetric !== "profit_factor" ||
     minTrades !== 100 ||
+    symbolFilter !== "all" ||
     sourceFilter !== "all" ||
     dateAddedRange !== "all" ||
     searchQuery.trim() !== "" ||
@@ -112,6 +123,7 @@ export default function LeaderboardPage() {
   const handleResetFilters = () => {
     setPrimaryMetric("profit_factor");
     setMinTrades(100);
+    setSymbolFilter("all");
     setSourceFilter("all");
     setDateAddedRange("all");
     setDateAddedFrom("");
@@ -128,6 +140,11 @@ export default function LeaderboardPage() {
       .filter((b) => {
         // Trade count threshold
         if (minTrades > 0 && (b.total_trades === null || b.total_trades < minTrades)) {
+          return false;
+        }
+
+        // Symbol dropdown filter
+        if (symbolFilter !== "all" && b.symbol !== symbolFilter) {
           return false;
         }
 
@@ -209,7 +226,7 @@ export default function LeaderboardPage() {
         ...b,
         rank: index + 1,
       }));
-  }, [backtests, primaryMetric, minTrades, sourceFilter, dateAddedRange, dateAddedFrom, dateAddedTo, searchQuery, oosOnly]);
+  }, [backtests, primaryMetric, minTrades, symbolFilter, sourceFilter, dateAddedRange, dateAddedFrom, dateAddedTo, searchQuery, oosOnly]);
 
   return (
     <div className="space-y-6">
@@ -260,6 +277,24 @@ export default function LeaderboardPage() {
               <option value="300">300+</option>
               <option value="500">500+</option>
               <option value="1000">1,000+</option>
+            </Select>
+          </div>
+
+          {/* Symbol Filter */}
+          <div className="flex items-center gap-2">
+            <span className="eyebrow">Symbol</span>
+            <Select
+              value={symbolFilter}
+              onChange={(e) => setSymbolFilter(e.target.value)}
+              className="h-8 w-36 text-xs font-mono"
+              aria-label="Filter by symbol"
+            >
+              <option value="all">All symbols</option>
+              {availableSymbols.map((sym) => (
+                <option key={sym} value={sym}>
+                  {sym}
+                </option>
+              ))}
             </Select>
           </div>
 

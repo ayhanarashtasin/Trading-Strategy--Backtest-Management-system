@@ -27,6 +27,7 @@ export const ALL_COLUMN_METADATA = [
   { id: "status", label: "Status", defaultVisible: true, category: "General" },
   { id: "symbol", label: "Symbol", defaultVisible: true, category: "Market" },
   { id: "timeframe", label: "Timeframe", defaultVisible: true, category: "Market" },
+  { id: "leverage", label: "Leverage", defaultVisible: true, category: "Execution" },
   { id: "source", label: "Source", defaultVisible: true, category: "General" },
   { id: "test_type", label: "Test Type", defaultVisible: true, category: "General" },
   { id: "start_date", label: "Start Date", defaultVisible: true, category: "Market" },
@@ -76,7 +77,6 @@ export const ALL_COLUMN_METADATA = [
   { id: "fee_per_side_percent", label: "Fee Per Side %", defaultVisible: false, category: "Execution" },
   { id: "slippage_per_side_percent", label: "Slippage %", defaultVisible: false, category: "Execution" },
   { id: "starting_capital", label: "Starting Capital", defaultVisible: false, category: "Execution" },
-  { id: "leverage", label: "Leverage", defaultVisible: false, category: "Execution" },
   { id: "position_size_percent", label: "Position Size %", defaultVisible: false, category: "Execution" },
   { id: "compounding", label: "Compounding", defaultVisible: false, category: "Execution" },
   { id: "funding_included", label: "Funding Included", defaultVisible: false, category: "Execution" },
@@ -235,6 +235,20 @@ export function createBaseColumns<T extends BacktestRow>(
         <span className="font-mono text-muted-foreground">{row.original.timeframe}</span>
       ),
       size: 60,
+    },
+
+    // 7b. Leverage
+    {
+      id: "leverage",
+      accessorKey: "leverage",
+      header: "Leverage",
+      sortingFn: "basic",
+      cell: ({ row }) => (
+        <span className="font-mono text-muted-foreground text-xs">
+          {row.original.leverage ? `${row.original.leverage}x` : "1x"}
+        </span>
+      ),
+      size: 75,
     },
 
     // 8. Source
@@ -801,14 +815,6 @@ export function createBaseColumns<T extends BacktestRow>(
       sortingFn: "basic",
       cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{formatCurrency(row.original.starting_capital)}</div>,
       size: 95,
-    },
-    {
-      id: "leverage",
-      accessorKey: "leverage",
-      header: "Leverage",
-      sortingFn: "basic",
-      cell: ({ row }) => <div className="text-right font-mono text-muted-foreground">{row.original.leverage ? `${row.original.leverage}x` : "1x"}</div>,
-      size: 75,
     },
     {
       id: "position_size_percent",

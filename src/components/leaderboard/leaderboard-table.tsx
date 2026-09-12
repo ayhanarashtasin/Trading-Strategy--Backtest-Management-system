@@ -104,22 +104,28 @@ export function LeaderboardTable({
               ...getInitialLeaderboardVisibility(),
               ...pref.column_visibility,
               ...(pref.column_visibility.created_at === undefined ? { created_at: true } : {}),
+              ...(pref.column_visibility.leverage === undefined ? { leverage: true } : {}),
             });
           }
           if (pref.column_order && pref.column_order.length > 0) {
-            const hasCreatedAt = pref.column_order.includes("created_at");
-            if (!hasCreatedAt) {
-              const creatorIndex = pref.column_order.indexOf("creator_name");
-              const newOrder = [...pref.column_order];
+            let newOrder = [...pref.column_order];
+            if (!newOrder.includes("created_at")) {
+              const creatorIndex = newOrder.indexOf("creator_name");
               if (creatorIndex !== -1) {
                 newOrder.splice(creatorIndex + 1, 0, "created_at");
               } else {
                 newOrder.push("created_at");
               }
-              setColumnOrder(newOrder);
-            } else {
-              setColumnOrder(pref.column_order);
             }
+            if (!newOrder.includes("leverage")) {
+              const tfIndex = newOrder.indexOf("timeframe");
+              if (tfIndex !== -1) {
+                newOrder.splice(tfIndex + 1, 0, "leverage");
+              } else {
+                newOrder.push("leverage");
+              }
+            }
+            setColumnOrder(newOrder);
           }
           if (pref.column_pinning) {
             setColumnPinning(pref.column_pinning);
