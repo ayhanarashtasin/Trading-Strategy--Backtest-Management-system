@@ -6,21 +6,10 @@ import {
   Tag,
 } from "@/types/database";
 
-export type StrategyDetailBacktest = Pick<
-  Backtest,
-  | "id"
-  | "backtest_name"
-  | "symbol"
-  | "timeframe"
-  | "source"
-  | "total_trades"
-  | "profit_factor"
-  | "net_profit_percent"
-  | "max_drawdown_percent"
-  | "win_rate_percent"
-  | "created_at"
-> & {
-  version: { version_name: string; strategy_id: string } | null;
+import type { BacktestRow } from "@/components/backtests/table/column-definitions";
+
+export type StrategyDetailBacktest = BacktestRow & {
+  version?: { version_name: string; strategy_id: string } | null;
 };
 
 export type StrategyDetailData = {

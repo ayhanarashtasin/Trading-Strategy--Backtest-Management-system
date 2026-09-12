@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { VersionFormDialog } from "@/components/strategies/version-form-dialog";
+import { StrategyBacktestsTable } from "@/components/strategies/strategy-backtests-table";
 import { NotesSection } from "@/components/shared/notes-section";
 import { AttachmentsSection } from "@/components/shared/attachments-section";
 import {
@@ -36,6 +37,7 @@ import {
   FileCode,
   ShieldAlert,
   Calendar,
+  Sliders,
 } from "lucide-react";
 import { formatPercent, formatNumber, formatDate, formatDateTime } from "@/lib/utils";
 
@@ -60,6 +62,10 @@ export default function StrategyDetailPage({
   // Version modal state
   const [versionModalOpen, setVersionModalOpen] = useState(false);
   const [versionToEdit, setVersionToEdit] = useState<StrategyVersion | null>(null);
+
+  // Active tab state & column settings dialog state
+  const [activeTab, setActiveTab] = useState("versions");
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
 
   // Delete confirmation modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -291,29 +297,45 @@ export default function StrategyDetailPage({
         </Card>
 
         {/* Tabbed Detail Sections */}
-        <Tabs defaultValue="versions" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="versions" className="gap-1.5">
-              <Layers className="h-3.5 w-3.5" />
-              Versions ({versions.length})
-            </TabsTrigger>
-            <TabsTrigger value="backtests" className="gap-1.5">
-              <FlaskConical className="h-3.5 w-3.5" />
-              Backtests ({backtests.length})
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Notes
-            </TabsTrigger>
-            <TabsTrigger value="attachments" className="gap-1.5">
-              <Paperclip className="h-3.5 w-3.5" />
-              Attachments
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-1.5">
-              <Activity className="h-3.5 w-3.5" />
-              Activity
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <TabsList>
+              <TabsTrigger value="versions" className="gap-1.5">
+                <Layers className="h-3.5 w-3.5" />
+                Versions ({versions.length})
+              </TabsTrigger>
+              <TabsTrigger value="backtests" className="gap-1.5">
+                <FlaskConical className="h-3.5 w-3.5" />
+                Backtests ({backtests.length})
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Notes
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" />
+                Attachments
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-1.5">
+                <Activity className="h-3.5 w-3.5" />
+                Activity
+              </TabsTrigger>
+            </TabsList>
+
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                setActiveTab("backtests");
+                setColumnSettingsOpen(true);
+              }}
+              className="gap-1.5 text-xs shadow-plate"
+              title="Configure visible backtest columns from leaderboard"
+            >
+              <Sliders className="h-3.5 w-3.5 text-muted-foreground" />
+              Columns
+            </Button>
+          </div>
 
           {/* TAB 1: VERSIONS */}
           <TabsContent value="versions" className="space-y-4">
@@ -451,114 +473,15 @@ export default function StrategyDetailPage({
 
           {/* TAB 2: BACKTESTS */}
           <TabsContent value="backtests" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Backtests</h2>
-              {canEdit && currentVersion && (
-                <Link href={`/backtests/new?versionId=${currentVersion.id}`}>
-                  <Button size="xs" variant="default" className="gap-1 text-xs">
-                    <Plus className="h-3.5 w-3.5" />
-                    Add backtest
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            {backtests.length === 0 ? (
-              <Card className="border-dashed bg-muted/40 p-8 text-center text-xs text-muted-foreground">
-                No backtests logged against this strategy yet.
-              </Card>
-            ) : (
-              <Card className="overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th className="pl-5">Backtest</th>
-                        <th>Version</th>
-                        <th>Market</th>
-                        <th>Source</th>
-                        <th>Date Added</th>
-                        <th className="text-right">Trades</th>
-                        <th className="text-right">PF</th>
-                        <th className="text-right">Return</th>
-                        <th className="text-right">Max DD</th>
-                        <th className="text-right">Win rate</th>
-                        <th className="pr-5 text-right">Open</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {backtests.map((bt) => (
-                        <tr key={bt.id}>
-                          <td className="max-w-[16rem] pl-5">
-                            <Link
-                              href={`/backtests/${bt.id}`}
-                              className="block truncate font-medium text-foreground hover:text-primary hover:underline"
-                            >
-                              {bt.backtest_name}
-                            </Link>
-                          </td>
-                          <td className="font-mono text-muted-foreground">
-                            {bt.version?.version_name || "V1"}
-                          </td>
-                          <td className="whitespace-nowrap font-mono text-muted-foreground">
-                            {bt.symbol}{" "}
-                            <span className="text-foreground">
-                              {bt.timeframe}
-                            </span>
-                          </td>
-                          <td>
-                            <Badge variant="outline" className="font-mono">
-                              {bt.source}
-                            </Badge>
-                          </td>
-                          <td
-                            className="whitespace-nowrap font-mono text-xs text-muted-foreground"
-                            title={`Inserted into website on ${formatDateTime(bt.created_at)}`}
-                          >
-                            <span className="inline-flex items-center gap-1.5">
-                              <Calendar className="h-3 w-3 text-muted-foreground/60" />
-                              {formatDate(bt.created_at)}
-                            </span>
-                          </td>
-                          <td className="text-right font-mono text-muted-foreground">
-                            {formatNumber(bt.total_trades, 0)}
-                          </td>
-                          <td className="text-right font-mono font-semibold text-foreground">
-                            {bt.profit_factor != null
-                              ? Number(bt.profit_factor).toFixed(2)
-                              : "N/A"}
-                          </td>
-                          <td className="text-right">
-                            <span
-                              className={
-                                Number(bt.net_profit_percent) >= 0
-                                  ? "val-gain"
-                                  : "val-loss"
-                              }
-                            >
-                              {formatPercent(bt.net_profit_percent)}
-                            </span>
-                          </td>
-                          <td className="text-right font-mono text-loss">
-                            {formatPercent(bt.max_drawdown_percent)}
-                          </td>
-                          <td className="text-right font-mono text-muted-foreground">
-                            {formatPercent(bt.win_rate_percent)}
-                          </td>
-                          <td className="pr-5 text-right">
-                            <Link href={`/backtests/${bt.id}`}>
-                              <Button size="xs" variant="outline">
-                                Open
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
+            <StrategyBacktestsTable
+              strategy={strategy}
+              currentVersion={currentVersion}
+              backtests={backtests}
+              canEdit={canEdit}
+              onRefresh={loadStrategyData}
+              columnSettingsOpen={columnSettingsOpen}
+              onColumnSettingsOpenChange={setColumnSettingsOpen}
+            />
           </TabsContent>
 
           {/* TAB 3: RESEARCH NOTES */}
