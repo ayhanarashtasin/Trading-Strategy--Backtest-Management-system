@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Bookmark } from "lucide-react";
 import { useCachedState, readQueryCache } from "@/lib/query-cache";
 import { useStarredBacktests } from "@/lib/use-starred-backtests";
+import { getBacktestDurationDays } from "@/lib/utils";
 import BacktestsLoading from "./loading";
 
 function BacktestsPageContent() {
@@ -109,6 +110,7 @@ function BacktestsPageContent() {
       // Transform rows for flat TanStack table access
       const transformed: BacktestRow[] = allRows.map((b: any) => ({
         ...b,
+        duration_days: getBacktestDurationDays(b),
         strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
         strategy_id: b.strategy_version?.strategy?.id,
         version_name: b.strategy_version?.version_name || "V1",
@@ -251,6 +253,20 @@ function BacktestsPageContent() {
             const to = new Date(filters.dateAddedTo + "T23:59:59.999");
             if (itemDate > to) return false;
           }
+        }
+      }
+
+      // 15. Duration (Days) Filter
+      if (filters.daysVal.trim() !== "") {
+        const val = Number(filters.daysVal);
+        if (!isNaN(val)) {
+          const duration = getBacktestDurationDays(b);
+          if (duration === null) return false;
+          if (filters.daysOp === ">=" && !(duration >= val)) return false;
+          if (filters.daysOp === "<=" && !(duration <= val)) return false;
+          if (filters.daysOp === "=" && !(duration === val)) return false;
+          if (filters.daysOp === ">" && !(duration > val)) return false;
+          if (filters.daysOp === "<" && !(duration < val)) return false;
         }
       }
 

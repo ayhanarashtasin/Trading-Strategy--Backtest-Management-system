@@ -19,7 +19,7 @@ import { useCachedState, readQueryCache } from "@/lib/query-cache";
 import { useStarredBacktests } from "@/lib/use-starred-backtests";
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
 import { BacktestRow, LeaderboardRow } from "@/components/backtests/table/column-definitions";
-import { cn } from "@/lib/utils";
+import { cn, getBacktestDurationDays } from "@/lib/utils";
 
 type RankingMetric =
   | "profit_factor"
@@ -134,6 +134,7 @@ export default function LeaderboardPage() {
 
   // Filter criteria
   const [minTrades, setMinTrades] = useState<number>(100);
+  const [minDays, setMinDays] = useState<string>("");
   const [symbolFilter, setSymbolFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateAddedRange, setDateAddedRange] = useState<"all" | "today" | "7d" | "30d" | "90d" | "custom">("all");
@@ -190,6 +191,7 @@ export default function LeaderboardPage() {
 
       const transformed: BacktestRow[] = allRows.map((b: any) => ({
         ...b,
+        duration_days: getBacktestDurationDays(b),
         strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
         strategy_id: b.strategy_version?.strategy?.id,
         version_name: b.strategy_version?.version_name || "V1",
@@ -291,6 +293,7 @@ export default function LeaderboardPage() {
   const hasActiveFilters =
     !isDefaultCriteria ||
     minTrades !== 100 ||
+    minDays.trim() !== "" ||
     symbolFilter !== "all" ||
     sourceFilter !== "all" ||
     dateAddedRange !== "all" ||
@@ -304,6 +307,7 @@ export default function LeaderboardPage() {
       { metric: "total_trades", desc: true },
     ]);
     setMinTrades(100);
+    setMinDays("");
     setSymbolFilter("all");
     setSourceFilter("all");
     setDateAddedRange("all");
@@ -322,6 +326,17 @@ export default function LeaderboardPage() {
         // Trade count threshold
         if (minTrades > 0 && (b.total_trades === null || b.total_trades < minTrades)) {
           return false;
+        }
+
+        // Min Days threshold
+        if (minDays.trim() !== "") {
+          const daysThreshold = Number(minDays);
+          if (!isNaN(daysThreshold)) {
+            const duration = getBacktestDurationDays(b);
+            if (duration === null || duration < daysThreshold) {
+              return false;
+            }
+          }
         }
 
         // Symbol dropdown filter
@@ -435,6 +450,7 @@ export default function LeaderboardPage() {
     sortCriteria,
     primaryMetric,
     minTrades,
+    minDays,
     symbolFilter,
     sourceFilter,
     dateAddedRange,
@@ -625,6 +641,30 @@ export default function LeaderboardPage() {
               <option value="500">500+</option>
               <option value="1000">1,000+</option>
             </Select>
+          </div>
+
+          {/* Day Box (Min Days) */}
+          <div className="flex h-8 w-[calc(50%-0.375rem)] sm:w-auto items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+            <span className="eyebrow shrink-0">Days &ge;</span>
+            <input
+              type="number"
+              min="0"
+              value={minDays}
+              onChange={(e) => setMinDays(e.target.value)}
+              placeholder="200"
+              aria-label="Filter by minimum days"
+              className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+            {minDays && (
+              <button
+                type="button"
+                onClick={() => setMinDays("")}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear days filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           {/* Symbol Filter */}

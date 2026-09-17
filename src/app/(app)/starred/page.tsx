@@ -13,7 +13,7 @@ import { useCachedState, readQueryCache } from "@/lib/query-cache";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Star, FlaskConical, Trophy, RotateCcw } from "lucide-react";
-import { formatPercent, formatNumber } from "@/lib/utils";
+import { formatPercent, formatNumber, getBacktestDurationDays } from "@/lib/utils";
 import StarredLoading from "./loading";
 
 function StarredPageContent() {
@@ -105,6 +105,7 @@ function StarredPageContent() {
       const transformed: BacktestRow[] = (btData || [])
         .map((b: any) => ({
           ...b,
+          duration_days: getBacktestDurationDays(b),
           is_starred: true,
           strategy_name: b.strategy_version?.strategy?.name || "Unknown Strategy",
           strategy_id: b.strategy_version?.strategy?.id,
@@ -260,6 +261,20 @@ function StarredPageContent() {
             const to = new Date(activeFilters.dateAddedTo + "T23:59:59.999");
             if (itemDate > to) return false;
           }
+        }
+      }
+
+      // 15. Duration (Days) Filter
+      if (activeFilters.daysVal.trim() !== "") {
+        const val = Number(activeFilters.daysVal);
+        if (!isNaN(val)) {
+          const duration = getBacktestDurationDays(b);
+          if (duration === null) return false;
+          if (activeFilters.daysOp === ">=" && !(duration >= val)) return false;
+          if (activeFilters.daysOp === "<=" && !(duration <= val)) return false;
+          if (activeFilters.daysOp === "=" && !(duration === val)) return false;
+          if (activeFilters.daysOp === ">" && !(duration > val)) return false;
+          if (activeFilters.daysOp === "<" && !(duration < val)) return false;
         }
       }
 

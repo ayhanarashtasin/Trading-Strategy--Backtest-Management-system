@@ -4,7 +4,7 @@ import { Backtest } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { formatPercent, formatNumber, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
+import { formatPercent, formatNumber, formatCurrency, formatDate, formatDateTime, getBacktestDurationDays } from "@/lib/utils";
 import Link from "next/link";
 import { Eye, Trophy, Calendar, Star } from "lucide-react";
 
@@ -379,17 +379,7 @@ export function createBaseColumns<T extends BacktestRow>(
     // 11b. Duration Days
     {
       id: "duration_days",
-      accessorFn: (row) => {
-        if (row.duration_days != null) return row.duration_days;
-        if (row.start_date && row.end_date) {
-          const diff = Math.round(
-            (new Date(row.end_date).getTime() - new Date(row.start_date).getTime()) /
-              (1000 * 60 * 60 * 24)
-          );
-          return isNaN(diff) ? null : Math.max(0, diff);
-        }
-        return null;
-      },
+      accessorFn: (row) => getBacktestDurationDays(row),
       header: "Days",
       sortingFn: "basic",
       cell: ({ getValue }) => {

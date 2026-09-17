@@ -38,6 +38,9 @@ export interface FilterState {
   wrOp: ">=" | "<=" | "=" | ">" | "<";
   wrVal: string;
 
+  daysOp: ">=" | "<=" | "=" | ">" | "<";
+  daysVal: string;
+
   // Integrity flags
   feesIncludedOnly: boolean;
   oosTestedOnly: boolean;
@@ -66,6 +69,8 @@ export const INITIAL_FILTER_STATE: FilterState = {
   ddVal: "",
   wrOp: ">=",
   wrVal: "",
+  daysOp: ">=",
+  daysVal: "",
   feesIncludedOnly: false,
   oosTestedOnly: false,
   showArchived: false,
@@ -115,6 +120,7 @@ export function FilterPanel({
     filters.profitVal !== "",
     filters.ddVal !== "",
     filters.wrVal !== "",
+    filters.daysVal !== "",
     filters.feesIncludedOnly,
     filters.oosTestedOnly,
     filters.showArchived,
@@ -250,6 +256,20 @@ export function FilterPanel({
               onChange={(e) => updateField("ddVal", e.target.value)}
               placeholder="25"
               aria-label="Maximum drawdown percent"
+              className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+          </div>
+
+          {/* Quick Days filter */}
+          <div className="flex h-8 flex-1 sm:flex-initial items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+            <span className="eyebrow shrink-0">Days {filters.daysOp === ">=" ? "≥" : filters.daysOp === "<=" ? "≤" : filters.daysOp}</span>
+            <input
+              type="number"
+              min="0"
+              value={filters.daysVal}
+              onChange={(e) => updateField("daysVal", e.target.value)}
+              placeholder="200"
+              aria-label="Filter by days duration"
               className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
             />
           </div>
@@ -394,6 +414,34 @@ export function FilterPanel({
                 onChange={(e) => updateField("profitVal", e.target.value)}
                 placeholder="50%"
                 className="h-8 font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Duration Days Filter */}
+          <div className="space-y-1">
+            <label className="eyebrow block">Days (Duration)</label>
+            <div className="flex items-center gap-1">
+              <Select
+                value={filters.daysOp}
+                onChange={(e) => updateField("daysOp", e.target.value)}
+                className="h-8 w-16 text-xs"
+                aria-label="Days operator"
+              >
+                <option value=">=">≥</option>
+                <option value="<=">≤</option>
+                <option value="=">=</option>
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+              </Select>
+              <Input
+                type="number"
+                min="0"
+                value={filters.daysVal}
+                onChange={(e) => updateField("daysVal", e.target.value)}
+                placeholder="200"
+                className="h-8 font-mono text-xs"
+                aria-label="Filter by days duration"
               />
             </div>
           </div>

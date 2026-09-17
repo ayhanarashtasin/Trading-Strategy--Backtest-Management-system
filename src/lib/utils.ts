@@ -63,3 +63,22 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
+
+export function getBacktestDurationDays(row: {
+  duration_days?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}): number | null {
+  if (row.duration_days != null && !isNaN(Number(row.duration_days))) {
+    return Number(row.duration_days);
+  }
+  if (row.start_date && row.end_date) {
+    const start = new Date(row.start_date).getTime();
+    const end = new Date(row.end_date).getTime();
+    if (!isNaN(start) && !isNaN(end)) {
+      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      return isNaN(diff) ? null : Math.max(0, diff);
+    }
+  }
+  return null;
+}
