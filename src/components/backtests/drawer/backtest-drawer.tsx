@@ -19,6 +19,7 @@ import {
   Check,
   Minus,
   Calendar,
+  Star,
 } from "lucide-react";
 import {
   formatPercent,
@@ -26,12 +27,14 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  cn,
 } from "@/lib/utils";
 
 import { BacktestRow } from "../table/column-definitions";
 import { createClient } from "@/utils/supabase/client";
 import { BacktestMonthlyResult } from "@/types/database";
 import { MonthlyResultsTable } from "../monthly-results-table";
+import { useStarredBacktests } from "@/lib/use-starred-backtests";
 
 function DrawerMonthlyTab({ backtestId }: { backtestId: string }) {
   const supabase = createClient();
@@ -142,6 +145,9 @@ export function BacktestDrawer({
       ? Number(backtest.net_profit_percent)
       : null;
 
+  const { isStarred: checkStarred, toggleStar } = useStarredBacktests();
+  const isStarred = backtest ? checkStarred(backtest.id) : false;
+
   return (
     <Drawer
       open={open}
@@ -177,7 +183,7 @@ export function BacktestDrawer({
                     : "text-loss",
             },
             {
-              label: "Max drawdown",
+              label: "Drawdown",
               value: formatPercent(backtest.max_drawdown_percent),
               cls:
                 backtest.max_drawdown_percent == null
@@ -186,26 +192,24 @@ export function BacktestDrawer({
             },
             {
               label: "Trades",
-              value: formatNumber(backtest.total_trades, 0),
+              value: formatNumber(backtest.total_trades),
               cls: "text-foreground",
             },
-          ].map((r) => (
-            <div key={r.label} className="bg-card px-4 py-3.5">
-              <p className="eyebrow truncate">{r.label}</p>
-              <p
-                className={`mt-2 font-mono text-xl font-semibold leading-none ${r.cls}`}
-              >
-                {r.value}
-              </p>
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card p-3">
+              <span className="eyebrow block text-[10px]">{stat.label}</span>
+              <span className={`mt-0.5 block font-mono text-base font-semibold ${stat.cls}`}>
+                {stat.value}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* Provenance and actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-2.5">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <p className="text-xs text-muted-foreground">
-              <span className="eyebrow mr-2">Strategy</span>
+        {/* Action bar and links */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 text-xs">
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground">
+              Strategy:{" "}
               <Link
                 href={`/strategies/${backtest.strategy_version?.strategy?.id || ""}`}
                 className="font-medium text-primary hover:underline"
@@ -228,6 +232,16 @@ export function BacktestDrawer({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              size="xs"
+              variant={isStarred ? "secondary" : "outline"}
+              onClick={() => toggleStar(backtest)}
+              className={isStarred ? "text-sun border-sun/30 font-medium" : "text-muted-foreground hover:text-foreground"}
+              title={isStarred ? "Remove from Starred" : "Save to Starred"}
+            >
+              <Star className={cn("h-3.5 w-3.5", isStarred ? "fill-sun text-sun" : "")} />
+              {isStarred ? "Starred" : "Star"}
+            </Button>
             <Link href={`/backtests/${backtest.id}`}>
               <Button size="xs">
                 <ExternalLink className="h-3.5 w-3.5" />

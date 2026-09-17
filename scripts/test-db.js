@@ -29,7 +29,7 @@ async function testDatabase() {
 
     const requiredTables = [
       'activity_logs', 'attachments', 'backtest_monthly_results', 'backtest_yearly_results', 'backtests',
-      'profiles', 'research_notes', 'saved_views', 'strategies',
+      'profiles', 'research_notes', 'saved_views', 'starred_backtests', 'strategies',
       'strategy_tags', 'strategy_versions', 'tags', 'user_table_preferences'
     ];
 

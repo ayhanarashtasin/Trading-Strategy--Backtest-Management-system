@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatPercent, formatNumber, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import Link from "next/link";
-import { Eye, Trophy, Calendar } from "lucide-react";
+import { Eye, Trophy, Calendar, Star } from "lucide-react";
 
 export interface BacktestRow extends Backtest {
   strategy_name?: string;
@@ -21,6 +21,7 @@ export interface LeaderboardRow extends BacktestRow {
 
 export const ALL_COLUMN_METADATA = [
   { id: "select", label: "Select", defaultVisible: true, category: "Selection" },
+  { id: "star", label: "Star", defaultVisible: true, category: "Selection" },
   { id: "strategy_name", label: "Strategy", defaultVisible: true, category: "General" },
   { id: "version_name", label: "Version", defaultVisible: true, category: "General" },
   { id: "backtest_name", label: "Backtest Name", defaultVisible: true, category: "General" },
@@ -129,7 +130,8 @@ function renderRankedHeader(label: string, isRanked: boolean) {
 export function createBaseColumns<T extends BacktestRow>(
   onViewDetails: (row: T) => void,
   primaryMetric?: string,
-  onViewMonthly?: (row: T) => void
+  onViewMonthly?: (row: T) => void,
+  onToggleStar?: (row: T) => void
 ): ColumnDef<T>[] {
   return [
     // 1. Select Checkbox
@@ -158,7 +160,43 @@ export function createBaseColumns<T extends BacktestRow>(
       enableResizing: false,
     },
 
-    // 2. Strategy Name
+    // 2. Star Button
+    {
+      id: "star",
+      header: () => (
+        <div className="flex items-center justify-center" title="Starred">
+          <Star className="h-3.5 w-3.5 text-muted-foreground/60" />
+        </div>
+      ),
+      cell: ({ row }) => {
+        const isStarred = Boolean(row.original.is_starred);
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStar?.(row.original);
+            }}
+            title={isStarred ? "Remove from Starred" : "Save to Starred"}
+            className="flex h-6 w-6 mx-auto items-center justify-center rounded hover:bg-muted/80 transition-colors"
+          >
+            <Star
+              className={
+                "h-3.5 w-3.5 transition-transform active:scale-75 " +
+                (isStarred
+                  ? "fill-sun text-sun scale-110"
+                  : "text-muted-foreground/40 hover:text-sun")
+              }
+            />
+          </button>
+        );
+      },
+      size: 40,
+      enableSorting: false,
+      enableResizing: false,
+    },
+
+    // 3. Strategy Name
     {
       id: "strategy_name",
       accessorKey: "strategy_name",
@@ -902,15 +940,17 @@ export function createBaseColumns<T extends BacktestRow>(
 
 export function createBacktestColumns(
   onViewDetails: (row: BacktestRow) => void,
-  onViewMonthly?: (row: BacktestRow) => void
+  onViewMonthly?: (row: BacktestRow) => void,
+  onToggleStar?: (row: BacktestRow) => void
 ): ColumnDef<BacktestRow>[] {
-  return createBaseColumns<BacktestRow>(onViewDetails, undefined, onViewMonthly);
+  return createBaseColumns<BacktestRow>(onViewDetails, undefined, onViewMonthly, onToggleStar);
 }
 
 export function createLeaderboardColumns(
   onViewDetails: (row: LeaderboardRow) => void,
   primaryMetric?: string,
-  onViewMonthly?: (row: LeaderboardRow) => void
+  onViewMonthly?: (row: LeaderboardRow) => void,
+  onToggleStar?: (row: LeaderboardRow) => void
 ): ColumnDef<LeaderboardRow>[] {
   const rankColumn: ColumnDef<LeaderboardRow> = {
     id: "rank",
@@ -945,6 +985,6 @@ export function createLeaderboardColumns(
     enableResizing: false,
   };
 
-  const baseCols = createBaseColumns<LeaderboardRow>(onViewDetails, primaryMetric, onViewMonthly);
+  const baseCols = createBaseColumns<LeaderboardRow>(onViewDetails, primaryMetric, onViewMonthly, onToggleStar);
   return [rankColumn, ...baseCols];
 }

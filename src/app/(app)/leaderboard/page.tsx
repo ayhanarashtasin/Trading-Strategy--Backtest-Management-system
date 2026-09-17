@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, X, RotateCcw } from "lucide-react";
 import { useCachedState, readQueryCache } from "@/lib/query-cache";
+import { useStarredBacktests } from "@/lib/use-starred-backtests";
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
 import { BacktestRow, LeaderboardRow } from "@/components/backtests/table/column-definitions";
 
@@ -26,6 +27,7 @@ type RankingMetric =
 
 export default function LeaderboardPage() {
   const supabase = createClient();
+  const { starredIds, toggleStar } = useStarredBacktests();
 
   /* Same rows the backtests list uses; ranking happens client-side, so a
      revisit can rank the cached set immediately. */
@@ -225,8 +227,9 @@ export default function LeaderboardPage() {
       .map((b, index) => ({
         ...b,
         rank: index + 1,
+        is_starred: starredIds.has(b.id),
       }));
-  }, [backtests, primaryMetric, minTrades, symbolFilter, sourceFilter, dateAddedRange, dateAddedFrom, dateAddedTo, searchQuery, oosOnly]);
+  }, [backtests, primaryMetric, minTrades, symbolFilter, sourceFilter, dateAddedRange, dateAddedFrom, dateAddedTo, searchQuery, oosOnly, starredIds]);
 
   return (
     <div className="space-y-6">
@@ -419,6 +422,7 @@ export default function LeaderboardPage() {
         loading={loading}
         primaryMetric={primaryMetric}
         onRefresh={loadData}
+        onToggleStar={toggleStar}
       />
     </div>
   );

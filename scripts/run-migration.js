@@ -20,7 +20,9 @@ async function runMigration() {
     await client.connect();
     console.log('Connected successfully!');
 
-    const migrationPath = path.join(__dirname, '../supabase/migrations/20260901000000_init_schema.sql');
+    const migrationFile = process.argv[2] || '20260901000000_init_schema.sql';
+    const migrationPath = path.join(__dirname, '../supabase/migrations', migrationFile);
+    console.log(`Running migration: ${migrationFile}`);
     const sql = fs.readFileSync(migrationPath, 'utf8');
     
     console.log('Executing migration SQL...');

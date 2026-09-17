@@ -44,15 +44,16 @@ interface BacktestsTableProps {
   data: BacktestRow[];
   loading: boolean;
   onRefresh?: () => void;
+  onToggleStar?: (row: BacktestRow) => void;
 }
 
 const DEFAULT_COLUMN_ORDER = ALL_COLUMN_METADATA.map((c) => c.id);
 const DEFAULT_COLUMN_PINNING: ColumnPinningState = {
-  left: ["select", "strategy_name"],
+  left: ["select", "star", "strategy_name"],
   right: ["details"],
 };
 
-export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps) {
+export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: BacktestsTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
 
@@ -93,12 +94,21 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
             setColumnVisibility({
               ...getInitialVisibility(),
               ...pref.column_visibility,
+              ...(pref.column_visibility.star === undefined ? { star: true } : {}),
               ...(pref.column_visibility.created_at === undefined ? { created_at: true } : {}),
               ...(pref.column_visibility.leverage === undefined ? { leverage: true } : {}),
             });
           }
           if (pref.column_order && pref.column_order.length > 0) {
             let newOrder = [...pref.column_order];
+            if (!newOrder.includes("star")) {
+              const selectIndex = newOrder.indexOf("select");
+              if (selectIndex !== -1) {
+                newOrder.splice(selectIndex + 1, 0, "star");
+              } else {
+                newOrder.unshift("star");
+              }
+            }
             if (!newOrder.includes("created_at")) {
               const creatorIndex = newOrder.indexOf("creator_name");
               if (creatorIndex !== -1) {
@@ -204,7 +214,7 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
   const handleResetToDefault = () => {
     const defaultVis = getInitialVisibility();
     const defaultOrd = ALL_COLUMN_METADATA.map((c) => c.id);
-    const defaultPin = { left: ["select", "strategy_name"], right: ["details"] };
+    const defaultPin = { left: ["select", "star", "strategy_name"], right: ["details"] };
 
     setColumnVisibility(defaultVis);
     setColumnOrder(defaultOrd);
@@ -228,8 +238,8 @@ export function BacktestsTable({ data, loading, onRefresh }: BacktestsTableProps
 
   // Columns definition
   const columns = useMemo(
-    () => createBacktestColumns(handleViewDetails, handleViewMonthly),
-    [handleViewDetails, handleViewMonthly]
+    () => createBacktestColumns(handleViewDetails, handleViewMonthly, onToggleStar),
+    [handleViewDetails, handleViewMonthly, onToggleStar]
   );
 
   const table = useReactTable({

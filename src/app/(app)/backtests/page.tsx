@@ -13,12 +13,14 @@ import { SaveViewDialog } from "@/components/backtests/table/save-view-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Bookmark } from "lucide-react";
 import { useCachedState, readQueryCache } from "@/lib/query-cache";
+import { useStarredBacktests } from "@/lib/use-starred-backtests";
 import BacktestsLoading from "./loading";
 
 function BacktestsPageContent() {
   const { canEdit, user } = useAuth();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  const { starredIds, toggleStar } = useStarredBacktests();
 
   const [strategies, setStrategies] = useState<any[]>([]);
   const [savedViews, setSavedViews] = useState<any[]>([]);
@@ -249,8 +251,11 @@ function BacktestsPageContent() {
       }
 
       return true;
-    });
-  }, [backtests, deferredFilters]);
+    }).map((b) => ({
+      ...b,
+      is_starred: starredIds.has(b.id),
+    }));
+  }, [backtests, deferredFilters, starredIds]);
 
   // Distinct Symbols & Timeframes
   const allSymbols = useMemo(() => {
@@ -312,6 +317,7 @@ function BacktestsPageContent() {
         data={filteredData}
         loading={loading}
         onRefresh={loadBacktests}
+        onToggleStar={toggleStar}
       />
 
       {/* Save View Modal Dialog */}

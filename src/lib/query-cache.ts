@@ -108,9 +108,12 @@ export function useCachedState<T>(key: string, fallback: T) {
   }, [key]);
 
   const setData = useCallback(
-    (value: T) => {
-      writeQueryCache(key, value);
-      setDataState(value);
+    (value: T | ((prev: T) => T)) => {
+      setDataState((prev) => {
+        const next = typeof value === "function" ? (value as (prev: T) => T)(prev) : value;
+        writeQueryCache(key, next);
+        return next;
+      });
     },
     [key]
   );

@@ -49,11 +49,12 @@ interface LeaderboardTableProps {
   loading: boolean;
   primaryMetric: string;
   onRefresh?: () => void;
+  onToggleStar?: (row: LeaderboardRow) => void;
 }
 
 const DEFAULT_COLUMN_ORDER = LEADERBOARD_COLUMN_METADATA.map((c) => c.id);
 const DEFAULT_COLUMN_PINNING: ColumnPinningState = {
-  left: ["rank", "select", "strategy_name"],
+  left: ["rank", "select", "star", "strategy_name"],
   right: ["details"],
 };
 
@@ -62,6 +63,7 @@ export function LeaderboardTable({
   loading,
   primaryMetric,
   onRefresh,
+  onToggleStar,
 }: LeaderboardTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
@@ -103,12 +105,21 @@ export function LeaderboardTable({
             setColumnVisibility({
               ...getInitialLeaderboardVisibility(),
               ...pref.column_visibility,
+              ...(pref.column_visibility.star === undefined ? { star: true } : {}),
               ...(pref.column_visibility.created_at === undefined ? { created_at: true } : {}),
               ...(pref.column_visibility.leverage === undefined ? { leverage: true } : {}),
             });
           }
           if (pref.column_order && pref.column_order.length > 0) {
             let newOrder = [...pref.column_order];
+            if (!newOrder.includes("star")) {
+              const selectIndex = newOrder.indexOf("select");
+              if (selectIndex !== -1) {
+                newOrder.splice(selectIndex + 1, 0, "star");
+              } else {
+                newOrder.unshift("star");
+              }
+            }
             if (!newOrder.includes("created_at")) {
               const creatorIndex = newOrder.indexOf("creator_name");
               if (creatorIndex !== -1) {
@@ -246,8 +257,8 @@ export function LeaderboardTable({
 
   // Columns definition with active primaryMetric highlighting
   const columns = useMemo(
-    () => createLeaderboardColumns(handleViewDetails, primaryMetric, handleViewMonthly),
-    [handleViewDetails, primaryMetric, handleViewMonthly]
+    () => createLeaderboardColumns(handleViewDetails, primaryMetric, handleViewMonthly, onToggleStar),
+    [handleViewDetails, primaryMetric, handleViewMonthly, onToggleStar]
   );
 
   const table = useReactTable({

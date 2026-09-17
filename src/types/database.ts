@@ -206,6 +206,7 @@ export interface Backtest {
   archived_at: string | null;
 
   // Relations
+  is_starred?: boolean;
   strategy_version?: StrategyVersion & { strategy?: Strategy };
   creator?: Profile | null;
   updater?: Profile | null;
@@ -308,4 +309,12 @@ export interface ActivityLog {
   description: string | null;
   created_at: string;
   user?: Profile | null;
+}
+
+export interface StarredBacktest {
+  id: string;
+  user_id: string;
+  backtest_id: string;
+  created_at: string;
+  backtest?: Backtest;
 }

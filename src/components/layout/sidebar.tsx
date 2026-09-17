@@ -17,6 +17,7 @@ import {
   Eye,
   Activity,
   LoaderCircle,
+  Star,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ const navGroups: NavGroup[] = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Strategies", href: "/strategies", icon: Layers },
       { name: "Backtests", href: "/backtests", icon: FlaskConical },
+      { name: "Starred", href: "/starred", icon: Star },
     ],
   },
   {
