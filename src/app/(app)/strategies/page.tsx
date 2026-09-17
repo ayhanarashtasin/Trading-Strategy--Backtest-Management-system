@@ -272,7 +272,7 @@ export default function StrategiesPage() {
         <Select
           value={familyFilter}
           onChange={(e) => setFamilyFilter(e.target.value)}
-          className="h-8 w-36 text-xs"
+          className="h-8 w-[calc(50%-0.375rem)] sm:w-36 text-xs"
           aria-label="Filter by family"
         >
           <option value="all">All families</option>
@@ -286,7 +286,7 @@ export default function StrategiesPage() {
         <Select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-8 w-36 text-xs"
+          className="h-8 w-[calc(50%-0.375rem)] sm:w-36 text-xs"
           aria-label="Filter by status"
         >
           <option value="all">All statuses</option>
@@ -306,7 +306,7 @@ export default function StrategiesPage() {
         <Select
           value={dateAddedRange}
           onChange={(e) => setDateAddedRange(e.target.value as any)}
-          className="h-8 w-36 text-xs"
+          className="h-8 w-[calc(50%-0.375rem)] sm:w-36 text-xs"
           aria-label="Filter by date added"
         >
           <option value="all">Any date added</option>
@@ -318,13 +318,13 @@ export default function StrategiesPage() {
         </Select>
 
         {dateAddedRange === "custom" && (
-          <div className="flex items-center gap-1">
+          <div className="flex w-full items-center gap-1 sm:w-auto">
             <Input
               type="date"
               value={dateAddedFrom}
               onChange={(e) => setDateAddedFrom(e.target.value)}
               aria-label="Date added from"
-              className="h-8 w-32 font-mono text-xs px-2"
+              className="h-8 w-full sm:w-32 font-mono text-xs px-2"
               title="Date added from"
             />
             <span className="text-muted-foreground text-xs">to</span>
@@ -333,7 +333,7 @@ export default function StrategiesPage() {
               value={dateAddedTo}
               onChange={(e) => setDateAddedTo(e.target.value)}
               aria-label="Date added to"
-              className="h-8 w-32 font-mono text-xs px-2"
+              className="h-8 w-full sm:w-32 font-mono text-xs px-2"
               title="Date added to"
             />
           </div>
@@ -343,7 +343,7 @@ export default function StrategiesPage() {
         <Select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as any)}
-          className="h-8 w-36 text-xs"
+          className="h-8 w-[calc(50%-0.375rem)] sm:w-36 text-xs"
           aria-label="Sort strategies"
         >
           <option value="created_desc">Newest inserted</option>
@@ -402,15 +402,15 @@ export default function StrategiesPage() {
           {filteredStrategies.map((strategy) => (
             <Card
               key={strategy.id}
-              className="flex flex-col transition-colors hover:border-primary/35"
+              className="flex flex-col min-w-0 overflow-hidden transition-colors hover:border-primary/35"
             >
-              <div className="flex-1 space-y-3 p-5">
-                <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-3 p-5 min-w-0">
+                <div className="flex items-start justify-between gap-3 min-w-0">
                   <Link
                     href={`/strategies/${strategy.id}`}
                     onMouseEnter={() => router.prefetch(`/strategies/${strategy.id}`)}
                     onFocus={() => router.prefetch(`/strategies/${strategy.id}`)}
-                    className="text-[15px] font-semibold leading-snug tracking-tight text-foreground hover:text-primary hover:underline"
+                    className="text-[15px] font-semibold leading-snug tracking-tight text-foreground hover:text-primary hover:underline break-words [overflow-wrap:anywhere] min-w-0"
                   >
                     {strategy.name}
                   </Link>

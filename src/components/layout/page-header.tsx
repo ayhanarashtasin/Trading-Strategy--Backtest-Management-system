@@ -30,7 +30,7 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.375rem]">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.375rem] break-words [overflow-wrap:anywhere]">
           {title}
         </h1>
         {description && (
@@ -42,7 +42,7 @@ export function PageHeader({
       </div>
 
       {actions && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {actions}
         </div>
       )}

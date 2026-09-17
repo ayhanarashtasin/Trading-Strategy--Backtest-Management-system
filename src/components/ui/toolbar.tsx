@@ -23,7 +23,7 @@ export function Toolbar({
     >
       <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
       {trailing && (
-        <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{trailing}</div>
       )}
     </div>
   );
@@ -99,7 +99,7 @@ export function SearchField({
   className?: string;
 }) {
   return (
-    <div className={cn("relative min-w-[200px] max-w-sm flex-1", className)}>
+    <div className={cn("relative min-w-0 sm:min-w-[200px] max-w-sm flex-1", className)}>
       <svg
         aria-hidden
         viewBox="0 0 24 24"

@@ -130,14 +130,14 @@ export function FilterPanel({
             value={filters.search}
             onChange={(v) => updateField("search", v)}
             placeholder="Search names, symbols, details"
-            className="min-w-[180px] max-w-[240px]"
+            className="w-full sm:w-auto sm:min-w-[180px] sm:max-w-[240px]"
           />
 
           {/* Strategy Select */}
           <Select
             value={filters.strategyId}
             onChange={(e) => updateField("strategyId", e.target.value)}
-            className="h-8 w-40 text-xs"
+            className="h-8 w-[calc(50%-0.375rem)] sm:w-40 text-xs"
             aria-label="Filter by strategy"
           >
             <option value="all">All strategies</option>
@@ -152,7 +152,7 @@ export function FilterPanel({
           <Select
             value={filters.dateAddedRange}
             onChange={(e) => updateField("dateAddedRange", e.target.value)}
-            className="h-8 w-36 text-xs"
+            className="h-8 w-[calc(50%-0.375rem)] sm:w-36 text-xs"
             aria-label="Filter by date added"
           >
             <option value="all">Any date added</option>
@@ -164,13 +164,13 @@ export function FilterPanel({
           </Select>
 
           {filters.dateAddedRange === "custom" && (
-            <div className="flex items-center gap-1">
+            <div className="flex w-full sm:w-auto items-center gap-1">
               <Input
                 type="date"
                 value={filters.dateAddedFrom}
                 onChange={(e) => updateField("dateAddedFrom", e.target.value)}
                 aria-label="Date added from"
-                className="h-8 w-32 font-mono text-xs px-2"
+                className="h-8 w-full sm:w-32 font-mono text-xs px-2"
                 title="Added from"
               />
               <span className="text-muted-foreground text-xs">to</span>
@@ -179,7 +179,7 @@ export function FilterPanel({
                 value={filters.dateAddedTo}
                 onChange={(e) => updateField("dateAddedTo", e.target.value)}
                 aria-label="Date added to"
-                className="h-8 w-32 font-mono text-xs px-2"
+                className="h-8 w-full sm:w-32 font-mono text-xs px-2"
                 title="Added to"
               />
             </div>
@@ -189,7 +189,7 @@ export function FilterPanel({
           <Select
             value={filters.source}
             onChange={(e) => updateField("source", e.target.value)}
-            className="h-8 w-32 text-xs"
+            className="h-8 w-[calc(50%-0.375rem)] sm:w-32 text-xs"
             aria-label="Filter by source"
           >
             <option value="all">All sources</option>
@@ -206,7 +206,7 @@ export function FilterPanel({
           <Select
             value={filters.timeframe}
             onChange={(e) => updateField("timeframe", e.target.value)}
-            className="h-8 w-28 text-xs"
+            className="h-8 w-[calc(50%-0.375rem)] sm:w-28 text-xs"
             aria-label="Filter by timeframe"
           >
             <option value="all">All timeframes</option>
@@ -223,11 +223,11 @@ export function FilterPanel({
             onChange={(e) => updateField("symbol", e.target.value)}
             placeholder="BTCUSDT"
             aria-label="Filter by symbol"
-            className="h-8 w-32 font-mono text-xs"
+            className="h-8 w-[calc(50%-0.375rem)] sm:w-32 font-mono text-xs"
           />
 
           {/* Quick PF filter */}
-          <div className="flex h-8 items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+          <div className="flex h-8 flex-1 sm:flex-initial items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
             <span className="eyebrow shrink-0">PF &ge;</span>
             <input
               type="number"
@@ -241,7 +241,7 @@ export function FilterPanel({
           </div>
 
           {/* Quick DD filter */}
-          <div className="flex h-8 items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+          <div className="flex h-8 flex-1 sm:flex-initial items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
             <span className="eyebrow shrink-0">DD &le;</span>
             <input
               type="number"
@@ -256,7 +256,7 @@ export function FilterPanel({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full sm:w-auto items-center justify-end gap-2 pt-1 sm:pt-0">
           {activeFilterCount > 0 && (
             <Button size="xs" variant="ghost" onClick={handleReset}>
               <RotateCcw className="h-3 w-3" />

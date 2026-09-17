@@ -50,19 +50,21 @@ export function ColumnSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" onClose={() => onOpenChange(false)}>
-        <DialogHeader>
-          <div className="flex items-center space-x-2">
-            <Sliders className="h-5 w-5 text-primary" />
-            <DialogTitle>Table Column Layout & Settings</DialogTitle>
-          </div>
-          <DialogDescription>
-            Show, hide, reorder and pin columns. Your layout saves to your
-            account, so it comes back the next time you sign in.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[88dvh] p-0 flex flex-col" onClose={() => onOpenChange(false)}>
+        <div className="p-4 sm:p-6 border-b border-border bg-card pr-12">
+          <DialogHeader className="mb-0">
+            <div className="flex items-center space-x-2">
+              <Sliders className="h-5 w-5 text-primary shrink-0" />
+              <DialogTitle className="text-sm sm:text-base">Table Column Layout & Settings</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs">
+              Show, hide, reorder and pin columns. Your layout saves to your
+              account, so it comes back the next time you sign in.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-6 pt-2">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {/* Categories Grid */}
           {categories.map((category) => {
             const cols = metadata.filter((c) => c.category === category && c.id !== "select");
@@ -147,26 +149,28 @@ export function ColumnSettingsDialog({
           })}
         </div>
 
-        <DialogFooter className="sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={onResetToDefault}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset layout
-          </Button>
+        <div className="border-t border-border bg-muted/40 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={onResetToDefault}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset layout
+            </Button>
 
-          <Button
-            type="button"
-            size="xs"
-            variant="default"
-            onClick={() => onOpenChange(false)}
-          >
-            Done
-          </Button>
-        </DialogFooter>
+            <Button
+              type="button"
+              size="xs"
+              variant="default"
+              onClick={() => onOpenChange(false)}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

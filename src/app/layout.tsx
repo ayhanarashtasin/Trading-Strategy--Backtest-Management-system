@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,14 @@ const plexMono = IBM_Plex_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#0b1320",
+};
 
 export const metadata: Metadata = {
   title: "Escanor Strategy Lab",

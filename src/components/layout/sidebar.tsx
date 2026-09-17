@@ -102,7 +102,13 @@ function NavItemContent({
   );
 }
 
-export function Sidebar({ className }: { className?: string }) {
+export function Sidebar({
+  className,
+  onNavigate,
+}: {
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const { profile, role, isOwner, isLoading, signOut } = useAuth();
 
@@ -153,6 +159,7 @@ export function Sidebar({ className }: { className?: string }) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={onNavigate}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
                         "group relative flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors",

@@ -244,14 +244,14 @@ export default function LeaderboardPage() {
 
       {/* Filter Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-2.5 text-xs shadow-plate">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
           {/* Metric Select */}
-          <div className="flex items-center gap-2">
-            <span className="eyebrow">Rank by</span>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <span className="eyebrow shrink-0">Rank by</span>
             <Select
               value={primaryMetric}
               onChange={(e) => setPrimaryMetric(e.target.value as RankingMetric)}
-              className="h-8 w-48 text-xs font-medium"
+              className="h-8 w-full sm:w-48 text-xs font-medium"
               aria-label="Ranking metric"
             >
               <option value="profit_factor">Profit factor</option>
@@ -269,12 +269,12 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Min Trades Threshold */}
-          <div className="flex items-center gap-2">
-            <span className="eyebrow">Min trades</span>
+          <div className="flex w-[calc(50%-0.375rem)] items-center gap-1.5 sm:w-auto">
+            <span className="eyebrow shrink-0">Min trades</span>
             <Select
               value={minTrades.toString()}
               onChange={(e) => setMinTrades(Number(e.target.value))}
-              className="h-8 w-28 text-xs"
+              className="h-8 w-full sm:w-28 text-xs"
               aria-label="Minimum sample size"
             >
               <option value="0">Any</option>
@@ -287,12 +287,12 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Symbol Filter */}
-          <div className="flex items-center gap-2">
-            <span className="eyebrow">Symbol</span>
+          <div className="flex w-[calc(50%-0.375rem)] items-center gap-1.5 sm:w-auto">
+            <span className="eyebrow shrink-0">Symbol</span>
             <Select
               value={symbolFilter}
               onChange={(e) => setSymbolFilter(e.target.value)}
-              className="h-8 w-36 text-xs font-mono"
+              className="h-8 w-full sm:w-36 text-xs font-mono"
               aria-label="Filter by symbol"
             >
               <option value="all">All symbols</option>
@@ -305,12 +305,12 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Source Filter */}
-          <div className="flex items-center gap-2">
-            <span className="eyebrow">Source</span>
+          <div className="flex w-[calc(50%-0.375rem)] items-center gap-1.5 sm:w-auto">
+            <span className="eyebrow shrink-0">Source</span>
             <Select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="h-8 w-32 text-xs"
+              className="h-8 w-full sm:w-32 text-xs"
               aria-label="Filter by source"
             >
               <option value="all">All sources</option>
@@ -325,12 +325,12 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Date Added Filter */}
-          <div className="flex items-center gap-2">
-            <span className="eyebrow">Date added</span>
+          <div className="flex w-[calc(50%-0.375rem)] items-center gap-1.5 sm:w-auto">
+            <span className="eyebrow shrink-0">Date added</span>
             <Select
               value={dateAddedRange}
               onChange={(e) => setDateAddedRange(e.target.value as any)}
-              className="h-8 w-36 text-xs"
+              className="h-8 w-full sm:w-36 text-xs"
               aria-label="Filter leaderboard by date added"
             >
               <option value="all">Any date added</option>
@@ -343,13 +343,13 @@ export default function LeaderboardPage() {
           </div>
 
           {dateAddedRange === "custom" && (
-            <div className="flex items-center gap-1">
+            <div className="flex w-full items-center gap-1 sm:w-auto">
               <Input
                 type="date"
                 value={dateAddedFrom}
                 onChange={(e) => setDateAddedFrom(e.target.value)}
                 aria-label="Date added from"
-                className="h-8 w-32 font-mono text-xs px-2"
+                className="h-8 w-full sm:w-32 font-mono text-xs px-2"
                 title="Date added from"
               />
               <span className="text-muted-foreground text-xs">to</span>
@@ -358,21 +358,21 @@ export default function LeaderboardPage() {
                 value={dateAddedTo}
                 onChange={(e) => setDateAddedTo(e.target.value)}
                 aria-label="Date added to"
-                className="h-8 w-32 font-mono text-xs px-2"
+                className="h-8 w-full sm:w-32 font-mono text-xs px-2"
                 title="Date added to"
               />
             </div>
           )}
 
           {/* Symbol / Name search */}
-          <div className="relative flex items-center">
+          <div className="relative flex w-full items-center sm:w-44">
             <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Filter symbol / name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-44 pl-8 pr-7 text-xs"
+              className="h-8 w-full pl-8 pr-7 text-xs"
             />
             {searchQuery && (
               <button

@@ -219,11 +219,11 @@ export default function BacktestDetailPage({
             </>
           )}
           <span aria-hidden>/</span>
-          <Value>{backtest.backtest_name}</Value>
+          <span className="text-foreground break-words [overflow-wrap:anywhere]">{backtest.backtest_name}</span>
         </nav>
 
         {/* Backtest Header Card */}
-        <Card className="space-y-5 p-6">
+        <Card className="space-y-5 p-4 sm:p-6 min-w-0 overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div className="min-w-0 space-y-2.5">
               <p className="eyebrow">
@@ -231,7 +231,7 @@ export default function BacktestDetailPage({
               </p>
 
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl break-words [overflow-wrap:anywhere]">
                   {backtest.backtest_name}
                 </h1>
                 <StatusBadge status={backtest.status} />

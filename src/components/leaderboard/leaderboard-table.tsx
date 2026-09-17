@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { TableRowsSkeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/lib/use-mobile";
 import { formatNumber, formatPercent, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 interface LeaderboardTableProps {
@@ -67,6 +68,7 @@ export function LeaderboardTable({
 }: LeaderboardTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
+  const isMobile = useIsMobile();
 
   // Drawer state for inspecting full backtest specification
   const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<LeaderboardRow | null>(null);
@@ -268,7 +270,7 @@ export function LeaderboardTable({
       sorting,
       columnVisibility,
       columnOrder,
-      columnPinning,
+      columnPinning: isMobile ? {} : columnPinning,
       rowSelection,
       pagination: {
         pageIndex: 0,
@@ -389,13 +391,18 @@ export function LeaderboardTable({
 
       {/* TanStack Table Container */}
       <Card className="overflow-hidden">
+        {isMobile && (
+          <div className="flex items-center justify-center gap-1.5 border-b border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
+            <span>← Scroll horizontally to view all columns & metrics →</span>
+          </div>
+        )}
         <div className="max-h-[680px] overflow-auto">
           <table className="table-dense w-full border-collapse text-left text-xs">
             <thead className="sticky top-0 z-20 select-none bg-muted font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
-                    const isPinned = header.column.getIsPinned();
+                    const isPinned = !isMobile && header.column.getIsPinned();
                     const canSort = header.column.getCanSort();
                     const sortDirection = header.column.getIsSorted();
 
@@ -490,7 +497,7 @@ export function LeaderboardTable({
                     }`}
                   >
                     {row.getVisibleCells().map((cell) => {
-                      const isPinned = cell.column.getIsPinned();
+                      const isPinned = !isMobile && cell.column.getIsPinned();
 
                       return (
                         <td
@@ -532,7 +539,7 @@ export function LeaderboardTable({
       </Card>
 
       {/* Pagination & Footer Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>Rows per page:</span>
           <select

@@ -24,9 +24,9 @@ import { Backtest } from "@/types/database";
 /* Layout constants for the comparison matrix. The metric column is sticky, so
    its width has to be fixed in one place. */
 const LABEL_CELL =
-  "sticky left-0 z-10 w-48 min-w-[12rem] border-r border-border bg-muted px-4 py-2.5 text-left align-middle font-medium text-muted-foreground";
+  "sticky left-0 z-10 w-32 min-w-[8rem] max-w-[8rem] sm:w-48 sm:min-w-[12rem] sm:max-w-[12rem] border-r border-border bg-muted px-2.5 sm:px-4 py-2.5 text-left align-middle font-medium text-muted-foreground text-xs";
 const VALUE_CELL =
-  "border-r border-border px-4 py-2.5 align-middle last:border-r-0";
+  "w-60 min-w-[15rem] max-w-[15rem] border-r border-border px-3 sm:px-4 py-2.5 align-middle last:border-r-0 text-xs";
 
 function CompareContent() {
   const router = useRouter();
@@ -220,7 +220,7 @@ function CompareContent() {
           <Select
             value={addSelectId}
             onChange={(e) => handleAddBacktest(e.target.value)}
-            className="h-8 w-64 text-xs"
+            className="h-8 w-full sm:w-64 text-xs"
             disabled={selectedBacktests.length >= 10}
             aria-label="Add a backtest to the comparison"
           >
@@ -255,12 +255,16 @@ function CompareContent() {
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-plate">
-          <table className="w-full min-w-[720px] border-collapse text-left text-xs">
+          {/* Mobile swipe hint */}
+          <div className="flex items-center justify-center gap-1.5 border-b border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground sm:hidden">
+            <span>← Scroll horizontally to compare backtests →</span>
+          </div>
+          <table className="w-full min-w-[640px] table-fixed border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-border">
                 <th
                   scope="col"
-                  className="sticky left-0 z-10 w-48 min-w-[12rem] border-r border-border bg-muted px-4 py-3"
+                  className="sticky left-0 z-10 w-32 min-w-[8rem] max-w-[8rem] sm:w-48 sm:min-w-[12rem] sm:max-w-[12rem] border-r border-border bg-muted px-2.5 sm:px-4 py-3"
                 >
                   <span className="eyebrow">Metric</span>
                 </th>
@@ -268,7 +272,7 @@ function CompareContent() {
                   <th
                     key={b.id}
                     scope="col"
-                    className="min-w-[200px] border-r border-border bg-muted px-4 py-3 align-top last:border-r-0"
+                    className="w-60 min-w-[15rem] max-w-[15rem] border-r border-border bg-muted px-3 sm:px-4 py-3 align-top last:border-r-0"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -284,12 +288,13 @@ function CompareContent() {
                         </p>
                       </div>
                       <button
+                        type="button"
                         onClick={() => handleRemoveBacktest(b.id)}
-                        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/[0.08] hover:text-destructive"
+                        className="relative shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/[0.08] hover:text-destructive"
                         title={`Remove ${b.backtest_name} from the comparison`}
+                        aria-label={`Remove ${b.backtest_name} from the comparison`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                        <span className="sr-only">Remove</span>
                       </button>
                     </div>
                   </th>

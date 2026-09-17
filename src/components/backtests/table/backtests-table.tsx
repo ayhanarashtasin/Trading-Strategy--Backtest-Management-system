@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { TableRowsSkeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/lib/use-mobile";
 
 interface BacktestsTableProps {
   data: BacktestRow[];
@@ -56,6 +57,7 @@ const DEFAULT_COLUMN_PINNING: ColumnPinningState = {
 export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: BacktestsTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
+  const isMobile = useIsMobile();
 
   // Drawer state
   const [selectedBacktestForDrawer, setSelectedBacktestForDrawer] = useState<BacktestRow | null>(null);
@@ -249,7 +251,7 @@ export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: Backt
       sorting,
       columnVisibility,
       columnOrder,
-      columnPinning,
+      columnPinning: isMobile ? {} : columnPinning,
       rowSelection,
       pagination: {
         pageIndex: 0,
@@ -374,13 +376,18 @@ export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: Backt
 
       {/* TanStack Table Container */}
       <Card className="overflow-hidden">
+        {isMobile && (
+          <div className="flex items-center justify-center gap-1.5 border-b border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
+            <span>← Scroll horizontally to view all columns & metrics →</span>
+          </div>
+        )}
         <div className="max-h-[680px] overflow-auto">
           <table className="table-dense w-full border-collapse text-left text-xs">
             <thead className="sticky top-0 z-20 select-none bg-muted font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
-                    const isPinned = header.column.getIsPinned();
+                    const isPinned = !isMobile && header.column.getIsPinned();
                     const canSort = header.column.getCanSort();
                     const sortDirection = header.column.getIsSorted();
 
@@ -475,7 +482,7 @@ export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: Backt
                     }`}
                   >
                     {row.getVisibleCells().map((cell) => {
-                      const isPinned = cell.column.getIsPinned();
+                      const isPinned = !isMobile && cell.column.getIsPinned();
 
                       return (
                         <td

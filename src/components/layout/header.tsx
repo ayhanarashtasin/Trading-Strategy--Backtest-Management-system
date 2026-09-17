@@ -131,23 +131,23 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <button
             onClick={onMobileMenuToggle}
             aria-label="Open navigation"
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
 
           <button
             onClick={() => setSearchOpen(true)}
-            className="flex h-8 w-full max-w-xs items-center justify-between gap-3 rounded-md border border-input bg-background px-2.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-card sm:w-72"
+            className="flex h-8 flex-1 max-w-[200px] items-center justify-between gap-2 rounded-md border border-input bg-background px-2.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-card sm:max-w-xs sm:w-72"
           >
-            <span className="flex items-center gap-2 truncate">
+            <span className="flex items-center gap-1.5 truncate">
               <Search className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Search the record</span>
+              <span className="truncate">Search record</span>
             </span>
             <kbd className="pointer-events-none hidden shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-block">
               Ctrl K
@@ -155,19 +155,20 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {canEdit && (
             <>
               <Link href="/strategies/new">
-                <Button size="xs" variant="outline">
+                <Button size="xs" variant="outline" aria-label="New strategy" className="px-2 sm:px-3">
                   <Layers className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">New strategy</span>
                 </Button>
               </Link>
               <Link href="/backtests/new">
-                <Button size="xs" variant="default">
+                <Button size="xs" variant="default" className="px-2.5 sm:px-3">
                   <Plus className="h-3.5 w-3.5" />
-                  <span>Add backtest</span>
+                  <span className="hidden sm:inline">Add backtest</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </Link>
             </>
@@ -220,25 +221,25 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
             {searchResults.strategies.length > 0 && (
               <div>
                 <p className="eyebrow-ruled mb-2 px-1">Strategies</p>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {searchResults.strategies.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => navigateTo(`/strategies/${s.id}`)}
-                      className="flex w-full items-center justify-between gap-3 rounded-md p-2.5 text-left text-xs transition-colors hover:bg-accent"
+                      className="flex w-full flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 rounded-md p-2.5 text-left text-xs transition-colors hover:bg-accent"
                     >
-                      <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Layers className="h-4 w-4 shrink-0 text-primary" />
                         <span className="truncate">
                           <span className="font-semibold text-foreground">
                             {s.name}
                           </span>
-                          <span className="ml-2 text-muted-foreground">
+                          <span className="ml-2 text-muted-foreground text-[11px]">
                             {s.strategy_family}
                           </span>
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-2">
+                      <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
                         <span className="font-mono text-[10px] text-muted-foreground">
                           Added {formatDate(s.created_at)}
                         </span>
@@ -255,25 +256,25 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
             {searchResults.backtests.length > 0 && (
               <div>
                 <p className="eyebrow-ruled mb-2 px-1">Backtests</p>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {searchResults.backtests.map((bt) => (
                     <button
                       key={bt.id}
                       onClick={() => navigateTo(`/backtests/${bt.id}`)}
-                      className="flex w-full items-center justify-between gap-3 rounded-md p-2.5 text-left text-xs transition-colors hover:bg-accent"
+                      className="flex w-full flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 rounded-md p-2.5 text-left text-xs transition-colors hover:bg-accent"
                     >
-                      <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex min-w-0 items-center gap-2">
                         <FlaskConical className="h-4 w-4 shrink-0 text-primary" />
                         <span className="truncate">
                           <span className="font-semibold text-foreground">
                             {bt.backtest_name}
                           </span>
-                          <span className="ml-2 font-mono text-muted-foreground">
+                          <span className="ml-2 font-mono text-[11px] text-muted-foreground">
                             {bt.symbol} {bt.timeframe} · {bt.source}
                           </span>
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-2.5 font-mono text-[11px]">
+                      <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0 font-mono text-[11px]">
                         <span className="text-[10px] text-muted-foreground">
                           Added {formatDate(bt.created_at)}
                         </span>

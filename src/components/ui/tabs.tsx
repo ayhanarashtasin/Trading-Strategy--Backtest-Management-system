@@ -56,7 +56,7 @@ export function TabsList({
     <div
       role="tablist"
       className={cn(
-        "flex items-stretch gap-1 overflow-x-auto border-b border-border",
+        "flex items-stretch gap-1 overflow-x-auto border-b border-border no-scrollbar",
         className
       )}
     >

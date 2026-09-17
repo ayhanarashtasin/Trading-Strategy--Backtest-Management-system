@@ -206,9 +206,9 @@ export function BacktestDrawer({
         </div>
 
         {/* Action bar and links */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 text-xs">
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 text-xs">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+            <p className="text-muted-foreground break-words">
               Strategy:{" "}
               <Link
                 href={`/strategies/${backtest.strategy_version?.strategy?.id || ""}`}
@@ -220,7 +220,7 @@ export function BacktestDrawer({
                 {backtest.strategy_version?.version_name || ""}
               </span>
             </p>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="hidden sm:inline">·</span>
             <span
               className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
               title={`Inserted into website on ${formatDateTime(backtest.created_at)}`}
@@ -231,7 +231,7 @@ export function BacktestDrawer({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="xs"
               variant={isStarred ? "secondary" : "outline"}
@@ -245,13 +245,13 @@ export function BacktestDrawer({
             <Link href={`/backtests/${backtest.id}`}>
               <Button size="xs">
                 <ExternalLink className="h-3.5 w-3.5" />
-                Open full record
+                <span>Open record</span>
               </Button>
             </Link>
             <Link href={`/backtests/${backtest.id}/edit`}>
               <Button size="xs" variant="outline">
                 <Edit className="h-3.5 w-3.5" />
-                Edit
+                <span>Edit</span>
               </Button>
             </Link>
           </div>
@@ -263,9 +263,9 @@ export function BacktestDrawer({
               <FileText className="h-3.5 w-3.5" />
               Specification
             </TabsTrigger>
-            <TabsTrigger value="execution">
+            <TabsTrigger value="market">
               <Sliders className="h-3.5 w-3.5" />
-              Market &amp; execution
+              Market & execution
             </TabsTrigger>
             <TabsTrigger value="metrics">
               <TrendingUp className="h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export function BacktestDrawer({
           <TabsContent value="spec" className="space-y-4">
             {backtest.details ? (
               <Panel title="Technical specification">
-                <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
                   {backtest.details}
                 </p>
               </Panel>
