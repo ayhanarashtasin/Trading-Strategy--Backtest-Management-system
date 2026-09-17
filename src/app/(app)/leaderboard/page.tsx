@@ -29,16 +29,6 @@ export default function LeaderboardPage() {
   const supabase = createClient();
   const { starredIds, toggleStar } = useStarredBacktests();
 
-  /* Same rows the backtests list uses; ranking happens client-side, so a
-     revisit can rank the cached set immediately. */
-  const {
-    data: backtests,
-    setData: setBacktests,
-    loading,
-    setLoading,
-    setIsRevalidating,
-  } = useCachedState<BacktestRow[]>("leaderboard:active", []);
-
   // Leaderboard criteria
   const [primaryMetric, setPrimaryMetric] = useState<RankingMetric>("profit_factor");
   const [minTrades, setMinTrades] = useState<number>(100);
@@ -50,17 +40,27 @@ export default function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [oosOnly, setOosOnly] = useState(false);
 
+  const cacheKey = `leaderboard:${primaryMetric}`;
+  const {
+    data: backtests,
+    setData: setBacktests,
+    loading,
+    setLoading,
+    setIsRevalidating,
+  } = useCachedState<BacktestRow[]>(cacheKey, []);
+
   const loadData = async () => {
-    const hasCached = readQueryCache("leaderboard:active") !== undefined;
+    const hasCached = readQueryCache(cacheKey) !== undefined;
     try {
       if (hasCached) setIsRevalidating(true);
       else setLoading(true);
 
       const PAGE_SIZE = 1000;
+      const MAX_ROWS = 1500;
       let allRows: any[] = [];
       let from = 0;
 
-      while (true) {
+      while (from < MAX_ROWS) {
         const { data, error } = await supabase
           .from("backtests")
           .select(`
@@ -73,10 +73,13 @@ export default function LeaderboardPage() {
             creator:profiles!backtests_created_by_fkey(display_name)
           `)
           .is("archived_at", null)
-          .order("created_at", { ascending: false })
+          .order(primaryMetric, { ascending: primaryMetric === "max_drawdown_percent", nullsFirst: false })
           .range(from, from + PAGE_SIZE - 1);
 
-        if (error) throw error;
+        if (error) {
+          console.warn("Leaderboard query warning/error:", error.message);
+          break;
+        }
         if (!data || data.length === 0) break;
         allRows.push(...data);
         if (data.length < PAGE_SIZE) break;
@@ -102,7 +105,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [primaryMetric]);
 
   // Extract unique available symbols for the dropdown filter
   const availableSymbols = useMemo(() => {

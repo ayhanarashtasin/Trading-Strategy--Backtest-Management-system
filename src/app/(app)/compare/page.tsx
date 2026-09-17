@@ -51,10 +51,11 @@ function CompareContent() {
         if (hasCached) setIsRevalidating(true);
         else setLoading(true);
         const PAGE_SIZE = 1000;
+        const MAX_ROWS = 1500;
         let allRows: any[] = [];
         let from = 0;
 
-        while (true) {
+        while (from < MAX_ROWS) {
           const { data, error } = await supabase
             .from("backtests")
             .select(`
@@ -69,7 +70,10 @@ function CompareContent() {
             .order("created_at", { ascending: false })
             .range(from, from + PAGE_SIZE - 1);
 
-          if (error) throw error;
+          if (error) {
+            console.warn("Compare load chunk warning:", error.message);
+            break;
+          }
           if (!data || data.length === 0) break;
           allRows.push(...data);
           if (data.length < PAGE_SIZE) break;
@@ -82,6 +86,23 @@ function CompareContent() {
         if (idsParam) {
           const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
           const matched = allRows.filter((b: Backtest) => ids.includes(b.id));
+          const missingIds = ids.filter((id) => !matched.some((b) => b.id === id));
+          if (missingIds.length > 0) {
+            const { data: missingData } = await supabase
+              .from("backtests")
+              .select(`
+                *,
+                strategy_version:strategy_versions(
+                  id,
+                  version_name,
+                  strategy:strategies(id, name, strategy_family)
+                )
+              `)
+              .in("id", missingIds);
+            if (missingData) {
+              matched.push(...missingData);
+            }
+          }
           setSelectedBacktests(matched);
         } else if (allRows.length >= 2) {
           setSelectedBacktests(allRows.slice(0, 2));

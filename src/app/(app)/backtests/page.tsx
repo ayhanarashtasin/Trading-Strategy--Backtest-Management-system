@@ -66,10 +66,11 @@ function BacktestsPageContent() {
       if (hasCached) setIsRevalidating(true);
       else setLoading(true);
       const PAGE_SIZE = 1000;
+      const MAX_ROWS = 2000;
       let allRows: any[] = [];
       let from = 0;
 
-      while (true) {
+      while (from < MAX_ROWS) {
         let query = supabase
           .from("backtests")
           .select(`
@@ -95,7 +96,10 @@ function BacktestsPageContent() {
         }
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) {
+          console.warn("Fetch backtests chunk error:", error.message);
+          break;
+        }
         if (!data || data.length === 0) break;
         allRows.push(...data);
         if (data.length < PAGE_SIZE) break;

@@ -35,6 +35,7 @@ tmp/
 *.tsbuildinfo
 next-env.d.ts
 .vercel/
+.playwright-mcp/
 
 # Debug logs
 npm-debug.log*
