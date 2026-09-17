@@ -265,16 +265,19 @@ function StarredPageContent() {
       }
 
       // 15. Duration (Days) Filter
-      if (activeFilters.daysVal.trim() !== "") {
+      if (activeFilters.daysVal && activeFilters.daysVal.trim() !== "") {
         const val = Number(activeFilters.daysVal);
         if (!isNaN(val)) {
           const duration = getBacktestDurationDays(b);
-          if (duration === null) return false;
-          if (activeFilters.daysOp === ">=" && !(duration >= val)) return false;
-          if (activeFilters.daysOp === "<=" && !(duration <= val)) return false;
-          if (activeFilters.daysOp === "=" && !(duration === val)) return false;
-          if (activeFilters.daysOp === ">" && !(duration > val)) return false;
-          if (activeFilters.daysOp === "<" && !(duration < val)) return false;
+          if (duration === null || duration < val) return false;
+        }
+      }
+
+      if (activeFilters.daysMaxVal && activeFilters.daysMaxVal.trim() !== "") {
+        const maxVal = Number(activeFilters.daysMaxVal);
+        if (!isNaN(maxVal)) {
+          const duration = getBacktestDurationDays(b);
+          if (duration === null || duration > maxVal) return false;
         }
       }
 
@@ -440,6 +443,13 @@ function StarredPageContent() {
               loading={loading}
               onRefresh={loadStarredBacktests}
               onToggleStar={handleToggleStar}
+              defaultSortColumn={
+                (filters.daysVal && filters.daysVal.trim() !== "") ||
+                (filters.daysMaxVal && filters.daysMaxVal.trim() !== "")
+                  ? "duration_days"
+                  : undefined
+              }
+              defaultSortDesc={true}
             />
           )}
         </>

@@ -46,6 +46,8 @@ interface BacktestsTableProps {
   loading: boolean;
   onRefresh?: () => void;
   onToggleStar?: (row: BacktestRow) => void;
+  defaultSortColumn?: string;
+  defaultSortDesc?: boolean;
 }
 
 const DEFAULT_COLUMN_ORDER = ALL_COLUMN_METADATA.map((c) => c.id);
@@ -54,7 +56,14 @@ const DEFAULT_COLUMN_PINNING: ColumnPinningState = {
   right: ["details"],
 };
 
-export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: BacktestsTableProps) {
+export function BacktestsTable({
+  data,
+  loading,
+  onRefresh,
+  onToggleStar,
+  defaultSortColumn,
+  defaultSortDesc,
+}: BacktestsTableProps) {
   const { user } = useAuth();
   const supabase = createClient();
   const isMobile = useIsMobile();
@@ -72,6 +81,20 @@ export function BacktestsTable({ data, loading, onRefresh, onToggleStar }: Backt
 
   // TanStack Table states
   const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }]);
+
+  // Synchronize dynamic defaultSortColumn (e.g. day-wise sort when duration filter is typed)
+  useEffect(() => {
+    if (defaultSortColumn) {
+      setSorting([{ id: defaultSortColumn, desc: defaultSortDesc ?? true }]);
+    } else {
+      setSorting((prev) => {
+        if (prev.length === 1 && prev[0].id === "duration_days") {
+          return [{ id: "created_at", desc: true }];
+        }
+        return prev;
+      });
+    }
+  }, [defaultSortColumn, defaultSortDesc]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(getInitialVisibility);
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(DEFAULT_COLUMN_ORDER);
   const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(DEFAULT_COLUMN_PINNING);

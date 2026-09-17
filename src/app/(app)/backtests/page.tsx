@@ -29,17 +29,19 @@ function BacktestsPageContent() {
   // Filters State
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
 
-  // Debounce daysVal so typing multiple digits doesn't spam database queries
+  // Debounce daysVal and daysMaxVal so typing multiple digits doesn't spam database queries
   const [debouncedDaysVal, setDebouncedDaysVal] = useState(filters.daysVal);
+  const [debouncedDaysMaxVal, setDebouncedDaysMaxVal] = useState(filters.daysMaxVal || "");
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedDaysVal(filters.daysVal);
+      setDebouncedDaysMaxVal(filters.daysMaxVal || "");
     }, 300);
     return () => clearTimeout(handler);
-  }, [filters.daysVal]);
+  }, [filters.daysVal, filters.daysMaxVal]);
 
   /* Archived and active are separate result sets, so they cache separately. */
-  const cacheKey = `backtests:${filters.showArchived ? "archived" : "active"}:${debouncedDaysVal}:${filters.daysOp}`;
+  const cacheKey = `backtests:${filters.showArchived ? "archived" : "active"}:${debouncedDaysVal}:${debouncedDaysMaxVal}:${filters.daysOp}`;
   const {
     data: backtests,
     setData: setBacktests,
@@ -108,11 +110,14 @@ function BacktestsPageContent() {
         if (debouncedDaysVal.trim() !== "") {
           const daysThreshold = Number(debouncedDaysVal);
           if (!isNaN(daysThreshold) && daysThreshold > 0) {
-            if (filters.daysOp === ">=") query = query.gte("duration_days", daysThreshold);
-            else if (filters.daysOp === ">") query = query.gt("duration_days", daysThreshold);
-            else if (filters.daysOp === "<=") query = query.lte("duration_days", daysThreshold);
-            else if (filters.daysOp === "<") query = query.lt("duration_days", daysThreshold);
-            else if (filters.daysOp === "=") query = query.eq("duration_days", daysThreshold);
+            query = query.gte("duration_days", daysThreshold);
+          }
+        }
+
+        if (debouncedDaysMaxVal.trim() !== "") {
+          const maxThreshold = Number(debouncedDaysMaxVal);
+          if (!isNaN(maxThreshold) && maxThreshold > 0) {
+            query = query.lte("duration_days", maxThreshold);
           }
         }
 
@@ -148,7 +153,7 @@ function BacktestsPageContent() {
 
   useEffect(() => {
     loadBacktests();
-  }, [filters.showArchived, debouncedDaysVal, filters.daysOp]);
+  }, [filters.showArchived, debouncedDaysVal, debouncedDaysMaxVal, filters.daysOp]);
 
   /* Filter off a deferred copy so the search box and the filter controls stay
      responsive while the table re-renders behind them. */
@@ -277,16 +282,19 @@ function BacktestsPageContent() {
       }
 
       // 15. Duration (Days) Filter
-      if (filters.daysVal.trim() !== "") {
+      if (filters.daysVal && filters.daysVal.trim() !== "") {
         const val = Number(filters.daysVal);
         if (!isNaN(val)) {
           const duration = getBacktestDurationDays(b);
-          if (duration === null) return false;
-          if (filters.daysOp === ">=" && !(duration >= val)) return false;
-          if (filters.daysOp === "<=" && !(duration <= val)) return false;
-          if (filters.daysOp === "=" && !(duration === val)) return false;
-          if (filters.daysOp === ">" && !(duration > val)) return false;
-          if (filters.daysOp === "<" && !(duration < val)) return false;
+          if (duration === null || duration < val) return false;
+        }
+      }
+
+      if (filters.daysMaxVal && filters.daysMaxVal.trim() !== "") {
+        const maxVal = Number(filters.daysMaxVal);
+        if (!isNaN(maxVal)) {
+          const duration = getBacktestDurationDays(b);
+          if (duration === null || duration > maxVal) return false;
         }
       }
 
@@ -296,6 +304,12 @@ function BacktestsPageContent() {
       is_starred: starredIds.has(b.id),
     }));
   }, [backtests, deferredFilters, starredIds]);
+
+  // Is day-wise duration filtering active
+  const isDaysFilterActive = Boolean(
+    (filters.daysVal && filters.daysVal.trim() !== "") ||
+    (filters.daysMaxVal && filters.daysMaxVal.trim() !== "")
+  );
 
   // Distinct Symbols & Timeframes
   const allSymbols = useMemo(() => {
@@ -358,6 +372,8 @@ function BacktestsPageContent() {
         loading={loading}
         onRefresh={loadBacktests}
         onToggleStar={toggleStar}
+        defaultSortColumn={isDaysFilterActive ? "duration_days" : undefined}
+        defaultSortDesc={true}
       />
 
       {/* Save View Modal Dialog */}

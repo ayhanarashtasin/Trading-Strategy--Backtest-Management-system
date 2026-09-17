@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SearchField } from "@/components/ui/toolbar";
-import { Filter, RotateCcw, ChevronDown, ChevronUp, Bookmark } from "lucide-react";
+import { Filter, RotateCcw, ChevronDown, ChevronUp, Bookmark, X } from "lucide-react";
 
 export interface FilterState {
   search: string;
@@ -40,6 +40,7 @@ export interface FilterState {
 
   daysOp: ">=" | "<=" | "=" | ">" | "<";
   daysVal: string;
+  daysMaxVal: string;
 
   // Integrity flags
   feesIncludedOnly: boolean;
@@ -71,6 +72,7 @@ export const INITIAL_FILTER_STATE: FilterState = {
   wrVal: "",
   daysOp: ">=",
   daysVal: "",
+  daysMaxVal: "",
   feesIncludedOnly: false,
   oosTestedOnly: false,
   showArchived: false,
@@ -121,6 +123,7 @@ export function FilterPanel({
     filters.ddVal !== "",
     filters.wrVal !== "",
     filters.daysVal !== "",
+    filters.daysMaxVal !== "",
     filters.feesIncludedOnly,
     filters.oosTestedOnly,
     filters.showArchived,
@@ -260,18 +263,52 @@ export function FilterPanel({
             />
           </div>
 
-          {/* Quick Days filter */}
+          {/* Quick Days ≥ filter */}
           <div className="flex h-8 flex-1 sm:flex-initial items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
-            <span className="eyebrow shrink-0">Days {filters.daysOp === ">=" ? "≥" : filters.daysOp === "<=" ? "≤" : filters.daysOp}</span>
+            <span className="eyebrow shrink-0">Days &ge;</span>
             <input
               type="number"
               min="0"
               value={filters.daysVal}
               onChange={(e) => updateField("daysVal", e.target.value)}
               placeholder="200"
-              aria-label="Filter by days duration"
+              aria-label="Filter by minimum days"
               className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
             />
+            {filters.daysVal && (
+              <button
+                type="button"
+                onClick={() => updateField("daysVal", "")}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear minimum days filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Days ≤ filter */}
+          <div className="flex h-8 flex-1 sm:flex-initial items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+            <span className="eyebrow shrink-0">Days &le;</span>
+            <input
+              type="number"
+              min="0"
+              value={filters.daysMaxVal}
+              onChange={(e) => updateField("daysMaxVal", e.target.value)}
+              placeholder="100"
+              aria-label="Filter by maximum days (less than)"
+              className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+            {filters.daysMaxVal && (
+              <button
+                type="button"
+                onClick={() => updateField("daysMaxVal", "")}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear maximum days filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -421,28 +458,31 @@ export function FilterPanel({
           {/* Duration Days Filter */}
           <div className="space-y-1">
             <label className="eyebrow block">Days (Duration)</label>
-            <div className="flex items-center gap-1">
-              <Select
-                value={filters.daysOp}
-                onChange={(e) => updateField("daysOp", e.target.value)}
-                className="h-8 w-16 text-xs"
-                aria-label="Days operator"
-              >
-                <option value=">=">≥</option>
-                <option value="<=">≤</option>
-                <option value="=">=</option>
-                <option value=">">&gt;</option>
-                <option value="<">&lt;</option>
-              </Select>
-              <Input
-                type="number"
-                min="0"
-                value={filters.daysVal}
-                onChange={(e) => updateField("daysVal", e.target.value)}
-                placeholder="200"
-                className="h-8 font-mono text-xs"
-                aria-label="Filter by days duration"
-              />
+            <div className="flex items-center gap-1.5">
+              <div className="flex flex-1 items-center gap-1">
+                <span className="text-xs text-muted-foreground font-mono shrink-0">&ge;</span>
+                <Input
+                  type="number"
+                  min="0"
+                  value={filters.daysVal}
+                  onChange={(e) => updateField("daysVal", e.target.value)}
+                  placeholder="Min"
+                  className="h-8 font-mono text-xs"
+                  aria-label="Minimum days"
+                />
+              </div>
+              <div className="flex flex-1 items-center gap-1">
+                <span className="text-xs text-muted-foreground font-mono shrink-0">&le;</span>
+                <Input
+                  type="number"
+                  min="0"
+                  value={filters.daysMaxVal}
+                  onChange={(e) => updateField("daysMaxVal", e.target.value)}
+                  placeholder="Max"
+                  className="h-8 font-mono text-xs"
+                  aria-label="Maximum days"
+                />
+              </div>
             </div>
           </div>
 

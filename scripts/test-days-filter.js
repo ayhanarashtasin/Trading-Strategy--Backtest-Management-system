@@ -100,4 +100,42 @@ const eq200 = filterByDays(sampleLeaderboard, "200", "=");
 assert.strictEqual(eq200.length, 1);
 assert.strictEqual(eq200[0].id, "bt-2");
 
+// Test 6: Dual Min & Max Days (Range filtering)
+function filterMinMaxDays(rows, minDays = "", maxDays = "") {
+  return rows.filter((b) => {
+    if (minDays && minDays.trim() !== "") {
+      const minThreshold = Number(minDays);
+      if (!isNaN(minThreshold)) {
+        const duration = getBacktestDurationDays(b);
+        if (duration === null || duration < minThreshold) return false;
+      }
+    }
+    if (maxDays && maxDays.trim() !== "") {
+      const maxThreshold = Number(maxDays);
+      if (!isNaN(maxThreshold)) {
+        const duration = getBacktestDurationDays(b);
+        if (duration === null || duration > maxThreshold) return false;
+      }
+    }
+    return true;
+  });
+}
+
+// Only maxDays: <= 200 days
+const lteMax200 = filterMinMaxDays(sampleLeaderboard, "", "200");
+assert.strictEqual(lteMax200.length, 2);
+assert.deepStrictEqual(lteMax200.map((b) => b.id), ["bt-1", "bt-2"]);
+
+// Both minDays (150) and maxDays (250)
+const between150and250 = filterMinMaxDays(sampleLeaderboard, "150", "250");
+assert.strictEqual(between150and250.length, 2);
+assert.deepStrictEqual(between150and250.map((b) => b.id), ["bt-2", "bt-4"]);
+
+// Day-wise sorting
+const sortedDayWise = [...between150and250].sort((a, b) => {
+  return getBacktestDurationDays(b) - getBacktestDurationDays(a);
+});
+assert.strictEqual(getBacktestDurationDays(sortedDayWise[0]), 250);
+assert.strictEqual(getBacktestDurationDays(sortedDayWise[1]), 200);
+
 console.log("All days filter tests passed successfully!");

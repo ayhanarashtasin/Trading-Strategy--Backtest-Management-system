@@ -33,7 +33,8 @@ type RankingMetric =
   | "cagr_percent"
   | "average_trade_percent"
   | "total_trades"
-  | "payoff_ratio";
+  | "payoff_ratio"
+  | "duration_days";
 
 interface SortCriterion {
   metric: RankingMetric;
@@ -60,6 +61,7 @@ const RANKING_METRICS_INFO: { id: RankingMetric; label: string; defaultDesc: boo
   { id: "average_trade_percent", label: "Avg Trade %", defaultDesc: true },
   { id: "total_trades", label: "Total Trades", defaultDesc: true },
   { id: "payoff_ratio", label: "Payoff Ratio", defaultDesc: true },
+  { id: "duration_days", label: "Duration (Days)", defaultDesc: true },
 ];
 
 const RANKING_PRESETS: RankingPreset[] = [
@@ -135,6 +137,7 @@ export default function LeaderboardPage() {
   // Filter criteria
   const [minTrades, setMinTrades] = useState<number>(100);
   const [minDays, setMinDays] = useState<string>("");
+  const [maxDays, setMaxDays] = useState<string>("");
   const [symbolFilter, setSymbolFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateAddedRange, setDateAddedRange] = useState<"all" | "today" | "7d" | "30d" | "90d" | "custom">("all");
@@ -143,16 +146,18 @@ export default function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [oosOnly, setOosOnly] = useState(false);
 
-  // Debounce minDays so typing multiple digits doesn't spam database queries
+  // Debounce minDays and maxDays so typing multiple digits doesn't spam database queries
   const [debouncedMinDays, setDebouncedMinDays] = useState(minDays);
+  const [debouncedMaxDays, setDebouncedMaxDays] = useState(maxDays);
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedMinDays(minDays);
+      setDebouncedMaxDays(maxDays);
     }, 300);
     return () => clearTimeout(handler);
-  }, [minDays]);
+  }, [minDays, maxDays]);
 
-  const cacheKey = `leaderboard:${primaryMetric}:${primaryDesc ? "desc" : "asc"}:${debouncedMinDays}:${symbolFilter}:${sourceFilter}`;
+  const cacheKey = `leaderboard:${primaryMetric}:${primaryDesc ? "desc" : "asc"}:${debouncedMinDays}:${debouncedMaxDays}:${symbolFilter}:${sourceFilter}`;
   const {
     data: backtests,
     setData: setBacktests,
@@ -190,6 +195,13 @@ export default function LeaderboardPage() {
         }
       }
 
+      if (debouncedMaxDays.trim() !== "") {
+        const maxThreshold = Number(debouncedMaxDays);
+        if (!isNaN(maxThreshold) && maxThreshold > 0) {
+          query = query.lte("duration_days", maxThreshold);
+        }
+      }
+
       if (symbolFilter !== "all") {
         query = query.eq("symbol", symbolFilter);
       }
@@ -223,6 +235,13 @@ export default function LeaderboardPage() {
           const daysThreshold = Number(debouncedMinDays);
           if (!isNaN(daysThreshold) && daysThreshold > 0) {
             fallbackQuery = fallbackQuery.gte("duration_days", daysThreshold);
+          }
+        }
+
+        if (debouncedMaxDays.trim() !== "") {
+          const maxThreshold = Number(debouncedMaxDays);
+          if (!isNaN(maxThreshold) && maxThreshold > 0) {
+            fallbackQuery = fallbackQuery.lte("duration_days", maxThreshold);
           }
         }
 
@@ -263,7 +282,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadData();
-  }, [primaryMetric, primaryDesc, debouncedMinDays, symbolFilter, sourceFilter]);
+  }, [primaryMetric, primaryDesc, debouncedMinDays, debouncedMaxDays, symbolFilter, sourceFilter]);
 
   // Priority map for columns highlighting: { [metric]: rankPriority }
   const rankingPriority = useMemo(() => {
@@ -348,6 +367,7 @@ export default function LeaderboardPage() {
     !isDefaultCriteria ||
     minTrades !== 100 ||
     minDays.trim() !== "" ||
+    maxDays.trim() !== "" ||
     symbolFilter !== "all" ||
     sourceFilter !== "all" ||
     dateAddedRange !== "all" ||
@@ -362,6 +382,7 @@ export default function LeaderboardPage() {
     ]);
     setMinTrades(100);
     setMinDays("");
+    setMaxDays("");
     setSymbolFilter("all");
     setSourceFilter("all");
     setDateAddedRange("all");
@@ -382,12 +403,23 @@ export default function LeaderboardPage() {
           return false;
         }
 
-        // Min Days threshold
+        // Min Days threshold (Days greater than or equal to)
         if (minDays.trim() !== "") {
           const daysThreshold = Number(minDays);
           if (!isNaN(daysThreshold)) {
             const duration = getBacktestDurationDays(b);
             if (duration === null || duration < daysThreshold) {
+              return false;
+            }
+          }
+        }
+
+        // Max Days threshold (Days less than or equal to)
+        if (maxDays.trim() !== "") {
+          const maxThreshold = Number(maxDays);
+          if (!isNaN(maxThreshold)) {
+            const duration = getBacktestDurationDays(b);
+            if (duration === null || duration > maxThreshold) {
               return false;
             }
           }
@@ -505,6 +537,7 @@ export default function LeaderboardPage() {
     primaryMetric,
     minTrades,
     minDays,
+    maxDays,
     symbolFilter,
     sourceFilter,
     dateAddedRange,
@@ -714,7 +747,31 @@ export default function LeaderboardPage() {
                 type="button"
                 onClick={() => setMinDays("")}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="Clear days filter"
+                aria-label="Clear minimum days filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Day Box (Max Days / Less than) */}
+          <div className="flex h-8 w-[calc(50%-0.375rem)] sm:w-auto items-center gap-1.5 rounded-md border border-input bg-card px-2 shadow-plate focus-within:border-primary">
+            <span className="eyebrow shrink-0">Days &le;</span>
+            <input
+              type="number"
+              min="0"
+              value={maxDays}
+              onChange={(e) => setMaxDays(e.target.value)}
+              placeholder="100"
+              aria-label="Filter by maximum days (less than)"
+              className="w-14 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+            {maxDays && (
+              <button
+                type="button"
+                onClick={() => setMaxDays("")}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear maximum days filter"
               >
                 <X className="h-3 w-3" />
               </button>
