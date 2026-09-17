@@ -159,12 +159,30 @@ export default function LeaderboardPage() {
       else setLoading(true);
 
       const PAGE_SIZE = 1000;
-      const MAX_ROWS = 1500;
-      const allRows: any[] = [];
-      let from = 0;
+      let allRows: any[] = [];
 
-      while (from < MAX_ROWS) {
-        const { data, error } = await supabase
+      const { data, error } = await supabase
+        .from("backtests")
+        .select(`
+          *,
+          strategy_version:strategy_versions(
+            id,
+            version_name,
+            strategy:strategies(id, name, strategy_family)
+          ),
+          creator:profiles!backtests_created_by_fkey(display_name)
+        `)
+        .is("archived_at", null)
+        .order(primaryMetric, { ascending: !primaryDesc, nullsFirst: false })
+        .range(0, PAGE_SIZE - 1);
+
+      if (!error && data && data.length > 0) {
+        allRows = data;
+      } else {
+        if (error) {
+          console.warn("Leaderboard primary metric query warning/timeout, falling back to created_at index:", error.message);
+        }
+        const fallback = await supabase
           .from("backtests")
           .select(`
             *,
@@ -176,17 +194,12 @@ export default function LeaderboardPage() {
             creator:profiles!backtests_created_by_fkey(display_name)
           `)
           .is("archived_at", null)
-          .order(primaryMetric, { ascending: !primaryDesc, nullsFirst: false })
-          .range(from, from + PAGE_SIZE - 1);
+          .order("created_at", { ascending: false })
+          .range(0, PAGE_SIZE - 1);
 
-        if (error) {
-          console.warn("Leaderboard query warning/error:", error.message);
-          break;
+        if (!fallback.error && fallback.data) {
+          allRows = fallback.data;
         }
-        if (!data || data.length === 0) break;
-        allRows.push(...data);
-        if (data.length < PAGE_SIZE) break;
-        from += PAGE_SIZE;
       }
 
       const transformed: BacktestRow[] = allRows.map((b: any) => ({

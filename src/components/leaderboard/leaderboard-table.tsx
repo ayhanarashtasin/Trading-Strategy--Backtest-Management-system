@@ -112,6 +112,7 @@ export function LeaderboardTable({
               ...(pref.column_visibility.star === undefined ? { star: true } : {}),
               ...(pref.column_visibility.created_at === undefined ? { created_at: true } : {}),
               ...(pref.column_visibility.leverage === undefined ? { leverage: true } : {}),
+              ...(pref.column_visibility.duration_days === undefined ? { duration_days: true } : {}),
             });
           }
           if (pref.column_order && pref.column_order.length > 0) {
@@ -138,6 +139,14 @@ export function LeaderboardTable({
                 newOrder.splice(tfIndex + 1, 0, "leverage");
               } else {
                 newOrder.push("leverage");
+              }
+            }
+            if (!newOrder.includes("duration_days")) {
+              const endIndex = newOrder.indexOf("end_date");
+              if (endIndex !== -1) {
+                newOrder.splice(endIndex + 1, 0, "duration_days");
+              } else {
+                newOrder.push("duration_days");
               }
             }
             setColumnOrder(newOrder);
