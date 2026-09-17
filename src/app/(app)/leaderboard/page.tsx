@@ -143,7 +143,16 @@ export default function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [oosOnly, setOosOnly] = useState(false);
 
-  const cacheKey = `leaderboard:${primaryMetric}:${primaryDesc ? "desc" : "asc"}`;
+  // Debounce minDays so typing multiple digits doesn't spam database queries
+  const [debouncedMinDays, setDebouncedMinDays] = useState(minDays);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMinDays(minDays);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [minDays]);
+
+  const cacheKey = `leaderboard:${primaryMetric}:${primaryDesc ? "desc" : "asc"}:${debouncedMinDays}:${symbolFilter}:${sourceFilter}`;
   const {
     data: backtests,
     setData: setBacktests,
@@ -161,7 +170,7 @@ export default function LeaderboardPage() {
       const PAGE_SIZE = 1000;
       let allRows: any[] = [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("backtests")
         .select(`
           *,
@@ -172,17 +181,32 @@ export default function LeaderboardPage() {
           ),
           creator:profiles!backtests_created_by_fkey(display_name)
         `)
-        .is("archived_at", null)
+        .is("archived_at", null);
+
+      if (debouncedMinDays.trim() !== "") {
+        const daysThreshold = Number(debouncedMinDays);
+        if (!isNaN(daysThreshold) && daysThreshold > 0) {
+          query = query.gte("duration_days", daysThreshold);
+        }
+      }
+
+      if (symbolFilter !== "all") {
+        query = query.eq("symbol", symbolFilter);
+      }
+
+      if (sourceFilter !== "all") {
+        query = query.eq("source", sourceFilter);
+      }
+
+      const { data, error } = await query
         .order(primaryMetric, { ascending: !primaryDesc, nullsFirst: false })
         .range(0, PAGE_SIZE - 1);
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         allRows = data;
-      } else {
-        if (error) {
-          console.warn("Leaderboard primary metric query warning/timeout, falling back to created_at index:", error.message);
-        }
-        const fallback = await supabase
+      } else if (error) {
+        console.warn("Leaderboard primary metric query warning/timeout, falling back to created_at index:", error.message);
+        let fallbackQuery = supabase
           .from("backtests")
           .select(`
             *,
@@ -193,7 +217,24 @@ export default function LeaderboardPage() {
             ),
             creator:profiles!backtests_created_by_fkey(display_name)
           `)
-          .is("archived_at", null)
+          .is("archived_at", null);
+
+        if (debouncedMinDays.trim() !== "") {
+          const daysThreshold = Number(debouncedMinDays);
+          if (!isNaN(daysThreshold) && daysThreshold > 0) {
+            fallbackQuery = fallbackQuery.gte("duration_days", daysThreshold);
+          }
+        }
+
+        if (symbolFilter !== "all") {
+          fallbackQuery = fallbackQuery.eq("symbol", symbolFilter);
+        }
+
+        if (sourceFilter !== "all") {
+          fallbackQuery = fallbackQuery.eq("source", sourceFilter);
+        }
+
+        const fallback = await fallbackQuery
           .order("created_at", { ascending: false })
           .range(0, PAGE_SIZE - 1);
 
@@ -222,7 +263,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadData();
-  }, [primaryMetric, primaryDesc]);
+  }, [primaryMetric, primaryDesc, debouncedMinDays, symbolFilter, sourceFilter]);
 
   // Priority map for columns highlighting: { [metric]: rankPriority }
   const rankingPriority = useMemo(() => {

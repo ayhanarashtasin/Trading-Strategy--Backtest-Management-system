@@ -29,8 +29,17 @@ function BacktestsPageContent() {
   // Filters State
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
 
+  // Debounce daysVal so typing multiple digits doesn't spam database queries
+  const [debouncedDaysVal, setDebouncedDaysVal] = useState(filters.daysVal);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedDaysVal(filters.daysVal);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [filters.daysVal]);
+
   /* Archived and active are separate result sets, so they cache separately. */
-  const cacheKey = `backtests:${filters.showArchived ? "archived" : "active"}`;
+  const cacheKey = `backtests:${filters.showArchived ? "archived" : "active"}:${debouncedDaysVal}:${filters.daysOp}`;
   const {
     data: backtests,
     setData: setBacktests,
@@ -96,6 +105,17 @@ function BacktestsPageContent() {
           query = query.is("archived_at", null);
         }
 
+        if (debouncedDaysVal.trim() !== "") {
+          const daysThreshold = Number(debouncedDaysVal);
+          if (!isNaN(daysThreshold) && daysThreshold > 0) {
+            if (filters.daysOp === ">=") query = query.gte("duration_days", daysThreshold);
+            else if (filters.daysOp === ">") query = query.gt("duration_days", daysThreshold);
+            else if (filters.daysOp === "<=") query = query.lte("duration_days", daysThreshold);
+            else if (filters.daysOp === "<") query = query.lt("duration_days", daysThreshold);
+            else if (filters.daysOp === "=") query = query.eq("duration_days", daysThreshold);
+          }
+        }
+
         const { data, error } = await query;
         if (error) {
           console.warn("Fetch backtests chunk error:", error.message);
@@ -128,7 +148,7 @@ function BacktestsPageContent() {
 
   useEffect(() => {
     loadBacktests();
-  }, [filters.showArchived]);
+  }, [filters.showArchived, debouncedDaysVal, filters.daysOp]);
 
   /* Filter off a deferred copy so the search box and the filter controls stay
      responsive while the table re-renders behind them. */
