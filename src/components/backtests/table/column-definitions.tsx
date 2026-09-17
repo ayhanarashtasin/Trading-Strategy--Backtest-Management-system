@@ -115,24 +115,59 @@ export function getInitialLeaderboardVisibility(): Record<string, boolean> {
   return vis;
 }
 
-function renderRankedHeader(label: string, isRanked: boolean) {
-  if (!isRanked) return label;
+export type RankingPriorityMap = Record<string, number>;
+
+function getRankingPriority(
+  primaryMetric: string | RankingPriorityMap | undefined,
+  metricId: string
+): number | null {
+  if (!primaryMetric) return null;
+  if (typeof primaryMetric === "string") {
+    return primaryMetric === metricId ? 1 : null;
+  }
+  const priority = primaryMetric[metricId];
+  return typeof priority === "number" ? priority : null;
+}
+
+function renderRankedHeader(label: string, isRankedOrPriority: boolean | number | null | undefined) {
+  if (!isRankedOrPriority) return label;
+  const badgeText = typeof isRankedOrPriority === "number" ? `#${isRankedOrPriority}` : "Ranked";
   return (
     <div className="flex items-center gap-1 font-semibold text-primary">
       <span>{label}</span>
-      <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
-        Ranked
+      <span className="rounded bg-primary/15 px-1 py-0.5 text-[9px] font-bold tracking-wider text-primary border border-primary/20">
+        {badgeText}
       </span>
     </div>
   );
 }
 
+function getRankedCellClass(priority: number | null | boolean | undefined): string {
+  if (!priority) return "";
+  if (priority === 1 || priority === true) return "bg-primary/[0.08] font-semibold";
+  if (priority === 2) return "bg-primary/[0.04] font-medium";
+  return "bg-primary/[0.02]";
+}
+
 export function createBaseColumns<T extends BacktestRow>(
   onViewDetails: (row: T) => void,
-  primaryMetric?: string,
+  primaryMetric?: string | RankingPriorityMap,
   onViewMonthly?: (row: T) => void,
   onToggleStar?: (row: T) => void
 ): ColumnDef<T>[] {
+  const pTrades = getRankingPriority(primaryMetric, "total_trades");
+  const pPF = getRankingPriority(primaryMetric, "profit_factor");
+  const pAvgTrade = getRankingPriority(primaryMetric, "average_trade_percent");
+  const pWinRate = getRankingPriority(primaryMetric, "win_rate_percent");
+  const pPayoff = getRankingPriority(primaryMetric, "payoff_ratio");
+  const pMaxDD = getRankingPriority(primaryMetric, "max_drawdown_percent");
+  const pNetProfit = getRankingPriority(primaryMetric, "net_profit_percent");
+  const pCAGR = getRankingPriority(primaryMetric, "cagr_percent");
+  const pSharpe = getRankingPriority(primaryMetric, "sharpe_ratio");
+  const pSortino = getRankingPriority(primaryMetric, "sortino_ratio");
+  const pCalmar = getRankingPriority(primaryMetric, "calmar_ratio");
+  const pRecovery = getRankingPriority(primaryMetric, "recovery_factor");
+
   return [
     // 1. Select Checkbox
     {
@@ -373,10 +408,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "total_trades",
       accessorKey: "total_trades",
-      header: () => renderRankedHeader("Trades", primaryMetric === "total_trades"),
+      header: () => renderRankedHeader("Trades", pTrades),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "total_trades" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pTrades)}`}>
           {formatNumber(row.original.total_trades, 0)}
         </div>
       ),
@@ -387,14 +422,14 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "profit_factor",
       accessorKey: "profit_factor",
-      header: () => renderRankedHeader("PF", primaryMetric === "profit_factor"),
+      header: () => renderRankedHeader("PF", pPF),
       sortingFn: "basic",
       cell: ({ row }) => {
         const pf = row.original.profit_factor;
         if (pf === null || pf === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(pf);
         return (
-          <div className={`text-right font-mono font-semibold ${num >= 1.2 ? "text-profit" : num >= 1.0 ? "text-foreground" : "text-loss"} ${primaryMetric === "profit_factor" ? "bg-primary/[0.05]" : ""}`}>
+          <div className={`text-right font-mono font-semibold ${num >= 1.2 ? "text-profit" : num >= 1.0 ? "text-foreground" : "text-loss"} ${getRankedCellClass(pPF)}`}>
             {num.toFixed(2)}
           </div>
         );
@@ -406,14 +441,14 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "average_trade_percent",
       accessorKey: "average_trade_percent",
-      header: () => renderRankedHeader("Avg Trade", primaryMetric === "average_trade_percent"),
+      header: () => renderRankedHeader("Avg Trade", pAvgTrade),
       sortingFn: "basic",
       cell: ({ row }) => {
         const val = row.original.average_trade_percent;
         if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(val);
         return (
-          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"} ${primaryMetric === "average_trade_percent" ? "bg-primary/[0.05] font-semibold" : ""}`}>
+          <div className={`text-right font-mono ${num > 0 ? "text-profit" : num < 0 ? "text-loss" : "text-foreground"} ${getRankedCellClass(pAvgTrade)}`}>
             {formatPercent(num, 3)}
           </div>
         );
@@ -444,10 +479,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "win_rate_percent",
       accessorKey: "win_rate_percent",
-      header: () => renderRankedHeader("Win Rate", primaryMetric === "win_rate_percent"),
+      header: () => renderRankedHeader("Win Rate", pWinRate),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "win_rate_percent" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pWinRate)}`}>
           {formatPercent(row.original.win_rate_percent)}
         </div>
       ),
@@ -458,10 +493,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "payoff_ratio",
       accessorKey: "payoff_ratio",
-      header: () => renderRankedHeader("Payoff", primaryMetric === "payoff_ratio"),
+      header: () => renderRankedHeader("Payoff", pPayoff),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "payoff_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pPayoff)}`}>
           {row.original.payoff_ratio ? Number(row.original.payoff_ratio).toFixed(2) : "N/A"}
         </div>
       ),
@@ -472,10 +507,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "max_drawdown_percent",
       accessorKey: "max_drawdown_percent",
-      header: () => renderRankedHeader("Max DD", primaryMetric === "max_drawdown_percent"),
+      header: () => renderRankedHeader("Max DD", pMaxDD),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-loss ${primaryMetric === "max_drawdown_percent" ? "bg-primary/[0.05] font-semibold" : ""}`}>
+        <div className={`text-right font-mono text-loss ${getRankedCellClass(pMaxDD)}`}>
           {formatPercent(row.original.max_drawdown_percent)}
         </div>
       ),
@@ -486,14 +521,14 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "net_profit_percent",
       accessorKey: "net_profit_percent",
-      header: () => renderRankedHeader("Return", primaryMetric === "net_profit_percent"),
+      header: () => renderRankedHeader("Return", pNetProfit),
       sortingFn: "basic",
       cell: ({ row }) => {
         const val = row.original.net_profit_percent;
         if (val === null || val === undefined) return <div className="text-right font-mono text-muted-foreground/60">N/A</div>;
         const num = Number(val);
         return (
-          <div className={`text-right font-mono font-semibold ${num >= 0 ? "text-profit" : "text-loss"} ${primaryMetric === "net_profit_percent" ? "bg-primary/[0.05]" : ""}`}>
+          <div className={`text-right font-mono font-semibold ${num >= 0 ? "text-profit" : "text-loss"} ${getRankedCellClass(pNetProfit)}`}>
             {num >= 0 ? "+" : ""}{formatPercent(num)}
           </div>
         );
@@ -608,10 +643,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "cagr_percent",
       accessorKey: "cagr_percent",
-      header: () => renderRankedHeader("CAGR %", primaryMetric === "cagr_percent"),
+      header: () => renderRankedHeader("CAGR %", pCAGR),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "cagr_percent" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pCAGR)}`}>
           {formatPercent(row.original.cagr_percent)}
         </div>
       ),
@@ -620,10 +655,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "sharpe_ratio",
       accessorKey: "sharpe_ratio",
-      header: () => renderRankedHeader("Sharpe", primaryMetric === "sharpe_ratio"),
+      header: () => renderRankedHeader("Sharpe", pSharpe),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "sharpe_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pSharpe)}`}>
           {row.original.sharpe_ratio ? Number(row.original.sharpe_ratio).toFixed(2) : "N/A"}
         </div>
       ),
@@ -632,10 +667,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "sortino_ratio",
       accessorKey: "sortino_ratio",
-      header: () => renderRankedHeader("Sortino", primaryMetric === "sortino_ratio"),
+      header: () => renderRankedHeader("Sortino", pSortino),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "sortino_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pSortino)}`}>
           {row.original.sortino_ratio ? Number(row.original.sortino_ratio).toFixed(2) : "N/A"}
         </div>
       ),
@@ -644,10 +679,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "calmar_ratio",
       accessorKey: "calmar_ratio",
-      header: () => renderRankedHeader("Calmar", primaryMetric === "calmar_ratio"),
+      header: () => renderRankedHeader("Calmar", pCalmar),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "calmar_ratio" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pCalmar)}`}>
           {row.original.calmar_ratio ? Number(row.original.calmar_ratio).toFixed(2) : "N/A"}
         </div>
       ),
@@ -656,10 +691,10 @@ export function createBaseColumns<T extends BacktestRow>(
     {
       id: "recovery_factor",
       accessorKey: "recovery_factor",
-      header: () => renderRankedHeader("Recovery", primaryMetric === "recovery_factor"),
+      header: () => renderRankedHeader("Recovery", pRecovery),
       sortingFn: "basic",
       cell: ({ row }) => (
-        <div className={`text-right font-mono text-muted-foreground ${primaryMetric === "recovery_factor" ? "bg-primary/[0.05] font-semibold text-foreground" : ""}`}>
+        <div className={`text-right font-mono text-muted-foreground ${getRankedCellClass(pRecovery)}`}>
           {row.original.recovery_factor ? Number(row.original.recovery_factor).toFixed(2) : "N/A"}
         </div>
       ),
@@ -948,7 +983,7 @@ export function createBacktestColumns(
 
 export function createLeaderboardColumns(
   onViewDetails: (row: LeaderboardRow) => void,
-  primaryMetric?: string,
+  primaryMetric?: string | RankingPriorityMap,
   onViewMonthly?: (row: LeaderboardRow) => void,
   onToggleStar?: (row: LeaderboardRow) => void
 ): ColumnDef<LeaderboardRow>[] {

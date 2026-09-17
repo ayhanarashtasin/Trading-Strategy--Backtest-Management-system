@@ -49,6 +49,7 @@ interface LeaderboardTableProps {
   data: LeaderboardRow[];
   loading: boolean;
   primaryMetric: string;
+  rankingPriority?: Record<string, number>;
   onRefresh?: () => void;
   onToggleStar?: (row: LeaderboardRow) => void;
 }
@@ -63,6 +64,7 @@ export function LeaderboardTable({
   data,
   loading,
   primaryMetric,
+  rankingPriority,
   onRefresh,
   onToggleStar,
 }: LeaderboardTableProps) {
@@ -156,16 +158,28 @@ export function LeaderboardTable({
     loadUserPreferences();
   }, [user?.id]);
 
-  // Ensure active ranking metric is always visible
+  const activeRankingMap = useMemo<Record<string, number>>(() => {
+    if (rankingPriority && Object.keys(rankingPriority).length > 0) {
+      return rankingPriority;
+    }
+    return primaryMetric ? { [primaryMetric]: 1 } : {};
+  }, [rankingPriority, primaryMetric]);
+
+  // Ensure active ranking metrics are always visible
   useEffect(() => {
-    if (primaryMetric && columnVisibility[primaryMetric] === false) {
+    const metricKeys = Object.keys(activeRankingMap);
+    const missingCols = metricKeys.filter((k) => k && columnVisibility[k] === false);
+    if (missingCols.length > 0) {
       setColumnVisibility((prev) => {
-        const updated = { ...prev, [primaryMetric]: true };
+        const updated = { ...prev };
+        missingCols.forEach((k) => {
+          updated[k] = true;
+        });
         savePreferences(updated, columnOrder, columnPinning, pageSize);
         return updated;
       });
     }
-  }, [primaryMetric]);
+  }, [activeRankingMap]);
 
   // Debounced save of preferences
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -257,10 +271,10 @@ export function LeaderboardTable({
     setMonthlyModalOpen(true);
   }, []);
 
-  // Columns definition with active primaryMetric highlighting
+  // Columns definition with active multi-column ranking highlighting
   const columns = useMemo(
-    () => createLeaderboardColumns(handleViewDetails, primaryMetric, handleViewMonthly, onToggleStar),
-    [handleViewDetails, primaryMetric, handleViewMonthly, onToggleStar]
+    () => createLeaderboardColumns(handleViewDetails, activeRankingMap, handleViewMonthly, onToggleStar),
+    [handleViewDetails, activeRankingMap, handleViewMonthly, onToggleStar]
   );
 
   const table = useReactTable({
@@ -328,7 +342,8 @@ export function LeaderboardTable({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `escanor_leaderboard_${primaryMetric}_${new Date().toISOString().split("T")[0]}.csv`);
+    const exportTag = Object.keys(activeRankingMap).join("_") || primaryMetric;
+    link.setAttribute("download", `escanor_leaderboard_${exportTag}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
