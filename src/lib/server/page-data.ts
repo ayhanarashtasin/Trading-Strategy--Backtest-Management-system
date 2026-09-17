@@ -25,8 +25,12 @@ export const getStrategyDetail = cache(
 
     if (error) {
       // ASVS 16.5.1: retain a useful code without exposing private row data.
-      console.error("Strategy detail read failed", { code: error.code });
+      console.error("Strategy detail read failed", { code: error.code, message: error.message });
       throw new Error("Unable to load this strategy right now.");
+    }
+
+    if (!data || !data.strategy) {
+      notFound();
     }
 
     return data as StrategyDetailData;

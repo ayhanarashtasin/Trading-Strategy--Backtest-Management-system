@@ -40,6 +40,13 @@ function BacktestsPageContent() {
     return () => clearTimeout(handler);
   }, [filters.daysVal, filters.daysMaxVal]);
 
+  useEffect(() => {
+    const stratParam = searchParams.get("strategyId") || searchParams.get("strategy");
+    if (stratParam) {
+      setFilters((prev) => ({ ...prev, strategyId: stratParam }));
+    }
+  }, [searchParams]);
+
   /* Archived and active are separate result sets, so they cache separately. */
   const cacheKey = `backtests:${filters.showArchived ? "archived" : "active"}:${debouncedDaysVal}:${debouncedDaysMaxVal}:${filters.daysOp}`;
   const {

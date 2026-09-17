@@ -16,6 +16,8 @@ export type StrategyDetailData = {
   strategy: (Strategy & {
     creator?: Pick<import("@/types/database").Profile, "display_name" | "email"> | null;
     updater?: Pick<import("@/types/database").Profile, "display_name" | "email"> | null;
+    versions_count?: number;
+    backtests_count?: number;
   }) | null;
   versions: Array<
     StrategyVersion & {

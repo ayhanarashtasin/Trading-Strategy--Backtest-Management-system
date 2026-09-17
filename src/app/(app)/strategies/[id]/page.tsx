@@ -302,11 +302,11 @@ export default function StrategyDetailPage({
             <TabsList>
               <TabsTrigger value="versions" className="gap-1.5">
                 <Layers className="h-3.5 w-3.5" />
-                Versions ({versions.length})
+                Versions ({strategy.versions_count ?? versions.length})
               </TabsTrigger>
               <TabsTrigger value="backtests" className="gap-1.5">
                 <FlaskConical className="h-3.5 w-3.5" />
-                Backtests ({backtests.length})
+                Backtests ({strategy.backtests_count ?? backtests.length})
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5">
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -356,6 +356,12 @@ export default function StrategyDetailPage({
                 </Button>
               )}
             </div>
+
+            {(strategy.versions_count ?? versions.length) > versions.length && (
+              <div className="rounded-md border border-border bg-muted/40 px-3.5 py-2 text-xs text-muted-foreground">
+                Showing the latest <strong>{versions.length}</strong> of <strong>{strategy.versions_count}</strong> rule versions.
+              </div>
+            )}
 
             {versions.length === 0 ? (
               <Card className="border-dashed bg-muted/40 p-8 text-center text-xs text-muted-foreground">
@@ -473,6 +479,19 @@ export default function StrategyDetailPage({
 
           {/* TAB 2: BACKTESTS */}
           <TabsContent value="backtests" className="space-y-4">
+            {(strategy.backtests_count ?? backtests.length) > backtests.length && (
+              <div className="rounded-md border border-border bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  Showing the latest <strong>{backtests.length}</strong> of <strong>{strategy.backtests_count}</strong> backtests.
+                </span>
+                <Link
+                  href={`/backtests?strategyId=${strategy.id}`}
+                  className="inline-flex items-center text-xs font-medium text-primary hover:underline gap-1"
+                >
+                  View all in Backtests table &rarr;
+                </Link>
+              </div>
+            )}
             <StrategyBacktestsTable
               strategy={strategy}
               currentVersion={currentVersion}
